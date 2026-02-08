@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salidas | Digital Stock</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .cart-table {
+            margin-top: var(--spacing-lg);
+        }
+
+        .cart-total {
+            text-align: right;
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            padding: var(--spacing-lg);
+            border-top: 2px solid var(--color-border);
+        }
+
+        .qty-input {
+            width: 80px;
+            text-align: center;
+        }
+
+        .stock-info {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-muted);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar se inyecta vía JS (layout.js) -->
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+                <div class="page-title-section">
+                    <h1 class="page-title">Salidas de Inventario</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Inicio</a><span>/</span><span>Salidas</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openSaleModal()">
+                        <i class="fas fa-plus"></i> Nueva Salida
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Historial de Salidas</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Cliente</th>
+                                        <th>Fecha</th>
+                                        <th>Hora</th>
+                                        <th>Monto Total</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted p-4">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Nueva Salida -->
+    <div class="modal-overlay" id="saleModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title">Nueva Salida de Inventario</h3>
+                <button class="modal-close" onclick="closeSaleModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Selección de cliente -->
+                <div class="form-group">
+                    <label class="form-label">Cliente</label>
+                    <div class="autocomplete-wrapper" id="clientAutocomplete">
+                        <input type="text" class="form-control" id="clientSearch" placeholder="Buscar cliente...">
+                        <div class="autocomplete-results" id="clientResults"></div>
+                    </div>
+                    <input type="hidden" id="selectedClient">
+                </div>
+
+                <!-- Agregar productos -->
+                <div class="form-group">
+                    <label class="form-label">Agregar Producto</label>
+                    <div class="autocomplete-wrapper" id="productAutocomplete">
+                        <input type="text" class="form-control" id="productSearch" placeholder="Buscar producto...">
+                        <div class="autocomplete-results" id="productResults"></div>
+                    </div>
+                </div>
+
+                <!-- Carrito -->
+                <div class="cart-table">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Precio</th>
+                                <th>IVA</th>
+                                <th>Cantidad</th>
+                                <th>Subtotal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">Agregue productos</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="cart-total"
+                        style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                        <div>Subtotal: <span id="cartSubtotal">$0.00</span></div>
+                        <div>IVA: <span id="cartIva">$0.00</span></div>
+                        <div style="font-size: 1.2rem; font-weight: bold;">Total: <span id="cartTotal">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSaleModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="saveSale()">
+                    <i class="fas fa-check"></i> Registrar Salida
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal detalle -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title">Detalle de Salida #<span id="detailId"></span></h3>
+                <button class="modal-close" onclick="Utils.closeModal('detailModal')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="detailBody"></div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal receipt-modal-content">
+            <span class="close-btn" onclick="closeReceiptModal()">&times;</span>
+            <div class="receipt-header">
+                <div class="receipt-title">Factura de Venta</div>
+                <div class="receipt-id" id="receiptId">#000000</div>
+            </div>
+            <div class="receipt-details">
+                <div class="receipt-row">
+                    <span>Fecha:</span>
+                    <span id="receiptDate">DD/MM/YYYY</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Cliente:</span>
+                    <span id="receiptClient">Nombre Cliente</span>
+                </div>
+                <!-- Items summary could go here -->
+            </div>
+            <div class="receipt-row">
+                <span>Subtotal:</span>
+                <span id="receiptSubtotal">$0.00</span>
+            </div>
+            <div class="receipt-row">
+                <span>IVA:</span>
+                <span id="receiptIva">$0.00</span>
+            </div>
+            <div class="receipt-total">
+                <span>Total:</span>
+                <span id="receiptTotal">$0.00</span>
+            </div>
+            <div id="receiptEmailMsg" class="receipt-email-info">
+                <!-- Injected via JS -->
+            </div>
+            <div class="form-actions" style="justify-content: center; margin-top: 2rem;">
+                <button type="button" class="btn btn-primary" onclick="closeReceiptModal()">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script src="../js/layout.js"></script>
+    <script>
+        const user = API.getUser();
+        let cart = [];
+
+        async function loadSales() {
+            const result = await API.sales.getAll();
+            const tbody = document.getElementById('salesBody');
+
+            if (result.success && result.data.length > 0) {
+                tbody.innerHTML = result.data.map(s => `
+                    <tr>
+                        <td><strong>#${s.id}</strong></td>
+                        <td>${Utils.escapeHtml(s.cliente_nombre || s.cliente_cedula)}</td>
+                        <td>${Utils.formatDate(s.fecha)}</td>
+                        <td>${s.hora || '-'}</td>
+                        <td><strong>${Utils.formatCurrency(s.monto)}</strong></td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm" onclick="viewDetail(${s.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay salidas registradas</td></tr>';
+            }
+        }
+
+        // Autocomplete cliente
+        const clientSearch = document.getElementById('clientSearch');
+        const clientResults = document.getElementById('clientResults');
+
+        const handleClientSearch = Utils.debounce(async () => {
+            const q = clientSearch.value.trim();
+            // Búsqueda silenciosa
+            const result = await API.clients.search(q, { skipLoader: true });
+
+            if (result.success && result.data.length > 0) {
+                clientResults.innerHTML = result.data.map(c => `
+                    <div class="autocomplete-item" onclick="selectClient('${c.cedula}', '${Utils.escapeHtml(c.nombre)}')">
+                        <strong>${Utils.escapeHtml(c.nombre)}</strong> <small>(${c.cedula})</small>
+                    </div>
+                `).join('');
+                document.getElementById('clientAutocomplete').classList.add('active');
+            } else {
+                clientResults.innerHTML = '<div class="autocomplete-item">No se encontraron clientes</div>';
+                document.getElementById('clientAutocomplete').classList.add('active');
+            }
+        }, 300);
+
+        clientSearch.addEventListener('input', handleClientSearch);
+        clientSearch.addEventListener('focus', handleClientSearch);
+
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('clientAutocomplete');
+            if (!wrapper.contains(e.target)) {
+                wrapper.classList.remove('active');
+            }
+        });
+
+        function selectClient(cedula, nombre) {
+            document.getElementById('selectedClient').value = cedula;
+            clientSearch.value = nombre;
+            document.getElementById('clientAutocomplete').classList.remove('active');
+        }
+
+        // Buscar productos
+        const productSearch = document.getElementById('productSearch');
+        const productResults = document.getElementById('productResults');
+
+        const handleProductSearch = Utils.debounce(async () => {
+            const q = productSearch.value.trim();
+            // Usar API.products.search con skipLoader
+            const result = await API.products.search(q, { skipLoader: true });
+
+            if (result.success && result.data.length > 0) {
+                productResults.innerHTML = result.data.map(p => `
+                    <div class="autocomplete-item" onclick="addToCart('${p.codigo}', '${Utils.escapeHtml(p.nombre)}', ${p.precio}, ${p.iva}, ${p.cantidad})">
+                        <strong>${p.nombre}</strong> - Stock: ${p.cantidad} <br>
+                        <small>Código: ${p.codigo} | Precio: ${Utils.formatCurrency(p.precio)}</small>
+                    </div>
+                `).join('');
+                document.getElementById('productAutocomplete').classList.add('active');
+            } else {
+                productResults.innerHTML = '<div class="autocomplete-item">No se encontraron productos</div>';
+                document.getElementById('productAutocomplete').classList.add('active');
+            }
+        }, 300);
+
+        productSearch.addEventListener('input', handleProductSearch);
+        productSearch.addEventListener('focus', handleProductSearch);
+
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('productAutocomplete');
+            if (!wrapper.contains(e.target)) {
+                wrapper.classList.remove('active');
+            }
+        });
+
+        function addToCart(codigo, nombre, precio, iva, stock) {
+            const existing = cart.find(item => item.codigo === codigo);
+            if (existing) {
+                if (existing.cantidad < stock) {
+                    existing.cantidad++;
+                } else {
+                    Utils.warning('Stock insuficiente para este producto');
+                    return;
+                }
+            } else {
+                if (stock <= 0) {
+                    Utils.warning('El producto no tiene stock disponible');
+                    return;
+                }
+                cart.push({ codigo, nombre, precio, iva, cantidad: 1, stock });
+            }
+            renderCart();
+            productSearch.value = '';
+            document.getElementById('productAutocomplete').classList.remove('active');
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartBody');
+            if (cart.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Agregue productos</td></tr>';
+                document.getElementById('cartSubtotal').textContent = '$0.00';
+                document.getElementById('cartIva').textContent = '$0.00';
+                document.getElementById('cartTotal').textContent = '$0.00';
+                return;
+            }
+
+            tbody.innerHTML = cart.map((item, idx) => {
+                const subtotal = item.precio * item.cantidad * (1 + item.iva / 100);
+                return `
+                <tr>
+                    <td>${item.codigo}</td>
+                    <td>${Utils.escapeHtml(item.nombre)}<br><span class="stock-info">Disp: ${item.stock}</span></td>
+                    <td>${Utils.formatCurrency(item.precio)}</td>
+                    <td>${item.iva}%</td>
+                    <td>
+                        <input type="number" class="form-control qty-input" value="${item.cantidad}"
+                            min="1" max="${item.stock}" onchange="updateQty(${idx}, this.value)">
+                    </td>
+                    <td>${Utils.formatCurrency(subtotal)}</td>
+                    <td>
+                        <button class="btn btn-ghost btn-sm text-danger" onclick="removeFromCart(${idx})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            const subtotal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            const totalIva = cart.reduce((sum, item) => sum + (item.precio * item.cantidad * (item.iva / 100)), 0);
+            const total = subtotal + totalIva;
+
+            document.getElementById('cartSubtotal').textContent = Utils.formatCurrency(subtotal);
+            document.getElementById('cartIva').textContent = Utils.formatCurrency(totalIva);
+            document.getElementById('cartTotal').textContent = Utils.formatCurrency(total);
+        }
+
+        function updateQty(idx, qty) {
+            const item = cart[idx];
+            let newQty = parseInt(qty);
+
+            if (isNaN(newQty) || newQty < 1) {
+                newQty = 1;
+                Utils.warning('La cantidad mínima es 1');
+            }
+
+            if (newQty > item.stock) {
+                newQty = item.stock;
+                Utils.warning('Stock insuficiente (Máximo: ' + item.stock + ')');
+            }
+
+            cart[idx].cantidad = newQty;
+            renderCart();
+        }
+
+
+        function removeFromCart(idx) {
+            cart.splice(idx, 1);
+            renderCart();
+        }
+
+        function openSaleModal() {
+            cart = [];
+            renderCart();
+            document.getElementById('selectedClient').value = '';
+            document.getElementById('clientSearch').value = '';
+            Utils.openModal('saleModal');
+        }
+
+        function closeSaleModal() {
+            Utils.closeModal('saleModal');
+        }
+
+        async function saveSale() {
+            const client = document.getElementById('selectedClient').value;
+            if (!client) {
+                Utils.error('Seleccione un cliente');
+                return;
+            }
+            if (cart.length === 0) {
+                Utils.error('Agregue al menos un producto');
+                return;
+            }
+
+            const details = cart.map(item => ({
+                codigo: item.codigo,
+                nombre: item.nombre,
+                cantidad: item.cantidad,
+                precio: item.precio,
+                iva: item.iva
+            }));
+
+            const result = await API.sales.create({
+                cliente_cedula: client,
+                productos: details
+            });
+
+            if (result.success) {
+                // Mostrar comprobante
+                showReceipt(result.data);
+
+                // Limpiar formulario
+                cart = [];
+                renderCart(); // Fix: call renderCart instead of just clearing array
+                document.getElementById('productSearch').value = '';
+                document.getElementById('clientSearch').value = '';
+                document.getElementById('selectedClient').value = '';
+                closeSaleModal(); // Rename specific function call if needed, here it matches
+                loadSales();
+            } else {
+                Utils.error(result.message);
+            }
+        }
+
+        function showReceipt(data) {
+            // Updated to use Utils.openModal which handles visibility class
+            document.getElementById('receiptId').textContent = '#' + String(data.id).padStart(6, '0');
+            document.getElementById('receiptDate').textContent = `${data.fecha} ${data.hora}`;
+            document.getElementById('receiptClient').textContent = data.cliente ? data.cliente.nombre : 'Cliente General';
+            document.getElementById('receiptSubtotal').textContent = Utils.formatCurrency(data.subtotal);
+            document.getElementById('receiptIva').textContent = Utils.formatCurrency(data.iva);
+            document.getElementById('receiptTotal').textContent = Utils.formatCurrency(data.monto);
+
+            const emailDiv = document.getElementById('receiptEmailMsg');
+            if (data.cliente && data.cliente.email && data.cliente.email.includes('@')) {
+                emailDiv.style.display = 'flex';
+                emailDiv.innerHTML = `<i class="fas fa-check-circle"></i> Factura enviada a: <strong>${Utils.escapeHtml(data.cliente.email)}</strong>`;
+            } else {
+                emailDiv.style.display = 'none';
+            }
+
+            Utils.openModal('receiptModal');
+        }
+
+        function closeReceiptModal() {
+            Utils.closeModal('receiptModal');
+        }
+
+
+        async function viewDetail(id) {
+            const result = await API.sales.getById(id);
+            if (result.success) {
+                document.getElementById('detailId').textContent = id;
+                const d = result.data;
+                document.getElementById('detailBody').innerHTML = `
+                <p><strong>Cliente:</strong> ${Utils.escapeHtml(d.cabecera.cliente || d.cabecera.cedula)}</p>
+                <p><strong>Fecha:</strong> ${Utils.formatDate(d.cabecera.fecha)} ${d.cabecera.hora || ''}</p>
+                <table class="table mt-3">
+                    <thead>
+                        <tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>Precio</th><th>IVA</th><th>Subtotal</th></tr>
+                    </thead>
+                    <tbody>
+                        ${d.detalles.map(det => `
+                                <tr>
+                                    <td>${det.codigo_producto}</td>
+                                    <td>${Utils.escapeHtml(det.nombre)}</td>
+                                    <td>${det.cantidad}</td>
+                                    <td>${Utils.formatCurrency(det.precio)}</td>
+                                    <td>${det.iva}%</td>
+                                    <td>${Utils.formatCurrency(det.precio * det.cantidad * (1 + det.iva / 100))}</td>
+                                </tr>
+                            `).join('')}
+                    </tbody>
+                </table>
+                <div class="cart-total">Total: ${Utils.formatCurrency(d.cabecera.monto)}</div>
+                `;
+                Utils.openModal('detailModal');
+            }
+        }
+
+        loadSales();
+    </script>
+</body>
+
+</html>

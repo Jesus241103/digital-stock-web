@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proveedores | Digital Stock</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar se inyecta vía JS (layout.js) -->
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+                <div class="page-title-section">
+                    <h1 class="page-title">Proveedores</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Inicio</a><span>/</span><span>Proveedores</span>
+                    </div>
+                </div>
+                <div class="header-actions" id="adminActions" style="display: none;">
+                    <button class="btn btn-primary" onclick="openProviderModal()">
+                        <i class="fas fa-plus"></i> Nuevo Proveedor
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="filters-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por código o nombre...">
+                    </div>
+                    <select class="filter-select form-control" id="statusFilter">
+                        <option value="1">Activos</option>
+                        <option value="0">Inactivos</option>
+                        <option value="">Todos los estados</option>
+                    </select>
+                </div>
+
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Nombre</th>
+                                        <th>Teléfono</th>
+                                        <th>Email</th>
+                                        <th>Estado</th>
+                                        <th class="admin-col">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="providersBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted p-4">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="providerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Nuevo Proveedor</h3>
+                <button class="modal-close" onclick="closeProviderModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="providerForm">
+                    <div class="form-group">
+                        <label class="form-label">Código (6 dígitos)</label>
+                        <input type="text" class="form-control" id="providerCodigo" maxlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="providerNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="providerTelefono" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="providerEmail" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeProviderModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveProvider()"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/layout.js"></script>
+    <script>
+        const user = API.getUser();
+        const isAdmin = user && user.rol === 'admin';
+        let editingCode = null;
+
+        if (isAdmin) {
+            document.getElementById('adminActions').style.display = 'flex';
+        }
+
+        async function loadProviders() {
+            const search = document.getElementById('searchInput').value.trim();
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const params = {};
+            if (search) params.search = search;
+            if (statusFilter !== '') params.estado = statusFilter;
+
+            const result = await API.providers.getAll(params);
+            const tbody = document.getElementById('providersBody');
+
+            if (result.success && result.data.length > 0) {
+                tbody.innerHTML = result.data.map(p => {
+                    // Botón de acción dependiendo del estado
+                    let actionBtn = '';
+                    if (p.estado === 1) {
+                        actionBtn = `
+                            <button class="btn btn-ghost btn-sm text-danger" onclick="toggleStatus('${p.codigo}', 0)" title="Desactivar">
+                                <i class="fas fa-trash"></i>
+                            </button>`;
+                    } else {
+                        actionBtn = `
+                            <button class="btn btn-ghost btn-sm text-success" onclick="toggleStatus('${p.codigo}', 1)" title="Activar">
+                                <i class="fas fa-check"></i>
+                            </button>`;
+                    }
+
+                    return `
+                    <tr class="${p.estado === 0 ? 'opacity-50' : ''}">
+                        <td><strong>${p.codigo}</strong></td>
+                        <td>
+                            ${Utils.escapeHtml(p.nombre)}
+                            ${p.estado === 0 ? '<span class="badge badge-secondary ml-2" style="font-size: 0.7em;">Inactivo</span>' : ''}
+                        </td>
+                        <td>${p.telefono || '-'}</td>
+                        <td>${Utils.escapeHtml(p.email || '-')}</td>
+                        <td><span class="badge ${p.estado ? 'badge-success' : 'badge-danger'}">${p.estado ? 'Activo' : 'Inactivo'}</span></td>
+                        <td class="admin-col table-actions">
+                            <button class="btn btn-ghost btn-sm" onclick="editProvider('${p.codigo}')" title="Editar"><i class="fas fa-edit"></i></button>
+                            ${actionBtn}
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+                if (!isAdmin) document.querySelectorAll('.admin-col').forEach(el => el.style.display = 'none');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay proveedores encontrados</td></tr>';
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', Utils.debounce(loadProviders, 300));
+        document.getElementById('statusFilter').addEventListener('change', loadProviders);
+
+        function openProviderModal() {
+            editingCode = null;
+            document.getElementById('modalTitle').textContent = 'Nuevo Proveedor';
+            document.getElementById('providerForm').reset();
+            document.getElementById('providerCodigo').disabled = false;
+            Utils.openModal('providerModal');
+        }
+
+        function closeProviderModal() { Utils.closeModal('providerModal'); }
+
+        async function editProvider(codigo) {
+            const result = await API.providers.getByCode(codigo);
+            if (result.success) {
+                editingCode = codigo;
+                const p = result.data;
+                document.getElementById('modalTitle').textContent = 'Editar Proveedor';
+                document.getElementById('providerCodigo').value = p.codigo;
+                document.getElementById('providerCodigo').disabled = true;
+                document.getElementById('providerNombre').value = p.nombre;
+                document.getElementById('providerTelefono').value = p.telefono || '';
+                document.getElementById('providerEmail').value = p.email || '';
+                Utils.openModal('providerModal');
+            }
+        }
+
+        async function saveProvider() {
+            const data = {
+                codigo: document.getElementById('providerCodigo').value,
+                nombre: document.getElementById('providerNombre').value,
+                telefono: document.getElementById('providerTelefono').value,
+                email: document.getElementById('providerEmail').value
+            };
+
+            let result = editingCode
+                ? await API.providers.update(editingCode, data)
+                : await API.providers.create(data);
+
+            if (result.success) {
+                Utils.success(result.message);
+                closeProviderModal();
+                loadProviders();
+            } else {
+                Utils.error(result.message);
+            }
+        }
+
+        async function deleteProvider(codigo) {
+            // Deprecated in favor of toggleStatus, keeping for safety or redirection
+            toggleStatus(codigo, 0);
+        }
+
+        async function toggleStatus(codigo, nuevoEstado) {
+            const accion = nuevoEstado === 1 ? 'activar' : 'eliminar/desactivar';
+            Utils.confirm(`¿Está seguro de ${accion} este proveedor?`, async () => {
+                const result = await API.providers.update(codigo, { estado: nuevoEstado });
+
+                if (result.success) {
+                    Utils.success(nuevoEstado === 1 ? 'Proveedor activado' : 'Proveedor desactivado');
+                    loadProviders();
+                } else {
+                    Utils.error(result.message);
+                }
+            }, nuevoEstado === 1 ? 'Activar' : 'Eliminar');
+        }
+
+        loadProviders();
+    </script>
+</body>
+
+</html>

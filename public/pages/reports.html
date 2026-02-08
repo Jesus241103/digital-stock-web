@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes | Digital Stock</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layout.css">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        .filters-container {
+            background: var(--color-surface);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .report-summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .chart-card {
+            background: var(--color-surface);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+        }
+
+        .tops-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .top-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .top-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.95rem;
+        }
+
+        .top-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .top-value {
+            font-weight: 600;
+            color: var(--color-primary);
+            background: var(--color-bg);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+
+        /* Estilos específicos para el contenido del modal de detalles */
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--color-border);
+            font-size: 0.95rem;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--spacing-sm);
+        }
+
+        .detail-table th,
+        .detail-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.9em;
+        }
+
+        .detail-table th {
+            background-color: var(--color-bg);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .detail-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        @media (max-width: 900px) {
+
+            .report-summary-cards,
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar se inyecta vía JS (layout.js) -->
+
+        <!-- Contenido -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+                <div class="page-title-section">
+                    <h1 class="page-title">Reportes Estratégicos</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Inicio</a><span>/</span><span>Reportes</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+
+                <!-- Barra de Filtros Superior -->
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label class="form-label">Tipo de Vista</label>
+                        <select id="reportType" class="form-control">
+                            <option value="monthly">Mensual</option>
+                            <option value="biweekly">Quincenal</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="form-label">Mes</label>
+                        <select id="reportMonth" class="form-control">
+                            <option value="1">Enero</option>
+                            <option value="2">Febrero</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Mayo</option>
+                            <option value="6">Junio</option>
+                            <option value="7">Julio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="form-label">Año</label>
+                        <input type="number" id="reportYear" class="form-control" min="2000" max="2100">
+                    </div>
+                </div>
+
+                <!-- Área Principal -->
+                <div id="reportMain">
+
+                    <!-- KPIs Principales -->
+                    <div class="report-summary-cards" id="summaryCards">
+                        <!-- Inyectado por JS -->
+                    </div>
+
+                    <!-- Gráficos Estratégicos -->
+                    <div class="charts-row">
+                        <div class="chart-card">
+                            <h4 class="text-center mb-4 text-muted">Tendencia Anual (Ventas vs Compras)</h4>
+                            <div class="chart-container">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h4 class="text-center mb-4 text-muted">Estado del Inventario</h4>
+                            <div class="chart-container" style="max-width: 300px; margin: 0 auto;">
+                                <canvas id="stockChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top 5 Listas -->
+                    <h3 class="report-section-title">Análisis de Desempeño (Top 5)</h3>
+                    <div class="tops-grid">
+
+                        <!-- Top Productos -->
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="m-0"><i class="fas fa-box"></i> Productos Top</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="top-list" id="topProductsList">
+                                    <li class="p-3 text-center text-muted">Cargando...</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Top Clientes -->
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="m-0"><i class="fas fa-users"></i> Mejores Clientes</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="top-list" id="topClientsList">
+                                    <li class="p-3 text-center text-muted">Cargando...</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Top Proveedores -->
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="m-0"><i class="fas fa-truck"></i> Proveedores Top</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="top-list" id="topProvidersList">
+                                    <li class="p-3 text-center text-muted">Cargando...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tablas Detalladas -->
+                    <div id="detailedTables">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Detalle -->
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Detalles de Transacción</h3>
+                <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/layout.js"></script>
+    <script>
+        let trendChart = null;
+        let stockChart = null;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            document.getElementById('reportYear').value = today.getFullYear();
+            document.getElementById('reportMonth').value = today.getMonth() + 1;
+
+            // Event Listeners para carga dinámica
+            ['reportType', 'reportMonth', 'reportYear'].forEach(id => {
+                document.getElementById(id).addEventListener('change', loadAllReports);
+                if (id === 'reportYear') {
+                    document.getElementById(id).addEventListener('input', Utils.debounce(loadAllReports, 500));
+                }
+            });
+
+            // Carga inicial
+            loadAllReports();
+        });
+
+        async function loadAllReports() {
+            const type = document.getElementById('reportType').value;
+            const month = document.getElementById('reportMonth').value;
+            const year = document.getElementById('reportYear').value;
+
+            // Cargar datos transaccionales (tablas y KPIs)
+            if (type === 'monthly') {
+                await renderMonthlyReport(month, year);
+            } else {
+                await renderBiweeklyReport(month, year);
+            }
+
+            // Cargar datos estratégicos (gráficos y tops)
+            await loadStrategicData(year);
+        }
+
+        async function loadStrategicData(year) {
+            const result = await API.reports.getCharts({ year });
+            if (!result.success) return;
+
+            const data = result.data;
+
+            renderTopList('topProductsList', data.topProducts, (item) =>
+                `<span>${item.nombre}</span> <span class="top-value">${item.total_vendido} unid.</span>`
+            );
+
+            renderTopList('topClientsList', data.topClients, (item) =>
+                `<span>${item.nombre}</span> <span class="top-value">${Utils.formatCurrency(item.total_compras)}</span>`
+            );
+
+            renderTopList('topProvidersList', data.topProviders, (item) =>
+                `<span>${item.nombre}</span> <span class="top-value">${Utils.formatCurrency(item.total_compras)}</span>`
+            );
+
+            updateTrendChart(data.monthlyTransactions);
+            updateStockChart(data.stockDistribution);
+        }
+
+        function renderTopList(elementId, items, templateFn) {
+            const el = document.getElementById(elementId);
+            if (!items || items.length === 0) {
+                el.innerHTML = '<li class="p-3 text-center text-muted">Sin datos registrados este año</li>';
+                return;
+            }
+            el.innerHTML = items.map(item =>
+                `<li class="top-list-item">${templateFn(item)}</li>`
+            ).join('');
+        }
+
+        function updateTrendChart(transactions) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const sales = new Array(12).fill(0);
+            const purchases = new Array(12).fill(0);
+
+            transactions.forEach(t => {
+                if (t.tipo === 'venta') sales[t.mes - 1] = t.total;
+                if (t.tipo === 'compra') purchases[t.mes - 1] = t.total;
+            });
+
+            if (trendChart) trendChart.destroy();
+
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Ventas',
+                            data: sales,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Compras',
+                            data: purchases,
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function updateStockChart(distribution) {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            const labels = distribution.map(d => d.nivel);
+            const data = distribution.map(d => d.cantidad);
+            const colors = { 'Bajo': '#e74c3c', 'Exceso': '#f1c40f', 'Normal': '#2ecc71' };
+
+            if (stockChart) stockChart.destroy();
+
+            stockChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: labels.map(l => colors[l] || '#95a5a6')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        async function renderMonthlyReport(month, year) {
+            const result = await API.reports.getMonthly(month, year);
+            if (!result.success) return;
+
+            const data = result.data;
+            const totals = data.totals;
+
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="kpi-card danger">
+                    <div class="kpi-icon"><i class="fas fa-arrow-down"></i></div>
+                    <div class="kpi-value">${Utils.formatCurrency(totals.purchases)}</div>
+                    <div class="kpi-label">Compras (${getMonthName(month)})</div>
+                </div>
+                <div class="kpi-card success">
+                    <div class="kpi-icon"><i class="fas fa-arrow-up"></i></div>
+                    <div class="kpi-value">${Utils.formatCurrency(totals.sales)}</div>
+                    <div class="kpi-label">Ventas (${getMonthName(month)})</div>
+                </div>
+                <div class="kpi-card ${totals.balance >= 0 ? 'info' : 'warning'}">
+                    <div class="kpi-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="kpi-value">${Utils.formatCurrency(totals.balance)}</div>
+                    <div class="kpi-label">Balance Neto</div>
+                </div>
+            `;
+
+            document.getElementById('detailedTables').innerHTML = `
+                <div class="tables-grid">
+                    <div>
+                        <h4 class="report-section-title">Entradas (Compras)</h4>
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="table-container" style="max-height: 400px;">
+                                    <table class="table">
+                                        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Monto</th><th>Ver</th></tr></thead>
+                                        <tbody>${generateTableRows(data.purchases, 'purchase')}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="report-section-title">Salidas (Ventas)</h4>
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="table-container" style="max-height: 400px;">
+                                    <table class="table">
+                                        <thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th><th>Ver</th></tr></thead>
+                                        <tbody>${generateTableRows(data.sales, 'sale')}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function renderBiweeklyReport(month, year) {
+            const result = await API.reports.getBiweekly(month, year);
+            if (!result.success) return;
+
+            const data = result.data;
+            const tPurchases = data.firstHalf.totalPurchases + data.secondHalf.totalPurchases;
+            const tSales = data.firstHalf.totalSales + data.secondHalf.totalSales;
+
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="kpi-card danger">
+                    <div class="kpi-icon"><i class="fas fa-arrow-down"></i></div>
+                    <div class="kpi-value">${Utils.formatCurrency(tPurchases)}</div>
+                    <div class="kpi-label">Compras Totales</div>
+                </div>
+                <div class="kpi-card success">
+                    <div class="kpi-icon"><i class="fas fa-arrow-up"></i></div>
+                    <div class="kpi-value">${Utils.formatCurrency(tSales)}</div>
+                    <div class="kpi-label">Ventas Totales</div>
+                </div>
+                <div class="kpi-card info">
+                    <div class="kpi-icon"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="kpi-value">Q1: ${Utils.formatCurrency(data.firstHalf.totalSales)}</div>
+                    <div class="kpi-label">Ventas 1ra Quincena</div>
+                </div>
+                 <div class="kpi-card info">
+                    <div class="kpi-icon"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="kpi-value">Q2: ${Utils.formatCurrency(data.secondHalf.totalSales)}</div>
+                    <div class="kpi-label">Ventas 2da Quincena</div>
+                </div>
+            `;
+
+            document.getElementById('detailedTables').innerHTML = `
+                <h4 class="report-section-title mt-4">Desglose 1ra Quincena (1-15)</h4>
+                <div class="tables-grid">
+                    <div>
+                        <div class="card">
+                             <div class="card-header bg-light">
+                                <strong>Entradas</strong> <span class="text-muted float-end">${Utils.formatCurrency(data.firstHalf.totalPurchases)}</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-container" style="max-height: 300px;">
+                                    <table class="table">
+                                        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Monto</th><th>Ver</th></tr></thead>
+                                        <tbody>${generateTableRows(data.firstHalf.purchases, 'purchase')}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <strong>Salidas</strong> <span class="text-muted float-end">${Utils.formatCurrency(data.firstHalf.totalSales)}</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-container" style="max-height: 300px;">
+                                    <table class="table">
+                                        <thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th><th>Ver</th></tr></thead>
+                                        <tbody>${generateTableRows(data.firstHalf.sales, 'sale')}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h4 class="report-section-title mt-4">Desglose 2da Quincena (16-Fin)</h4>
+                <div class="tables-grid">
+                    <div>
+                         <div class="card">
+                             <div class="card-header bg-light">
+                                <strong>Entradas</strong> <span class="text-muted float-end">${Utils.formatCurrency(data.secondHalf.totalPurchases)}</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-container" style="max-height: 300px;">
+                                    <table class="table">
+                                        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Monto</th><th>Ver</th></tr></thead>
+                                        <tbody>${generateTableRows(data.secondHalf.purchases, 'purchase')}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <strong>Salidas</strong> <span class="text-muted float-end">${Utils.formatCurrency(data.secondHalf.totalSales)}</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-container" style="max-height: 300px;">
+                                    <table class="table">
+                                        <thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th><th>Ver</th></tr></thead>
+                                        <tbody>${generateTableRows(data.secondHalf.sales, 'sale')}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateTableRows(rows, type) {
+            if (!rows.length) return '<tr><td colspan="4" class="text-center text-muted">Sin datos</td></tr>';
+            return rows.map(r => `
+                <tr>
+                    <td>${Utils.formatDate(r.fecha)}</td>
+                    <td>${type === 'purchase' ? (r.proveedor || 'General') : (r.cliente || 'General')}</td>
+                    <td>${Utils.formatCurrency(r.monto)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-icon btn-secondary" onclick="viewDetails('${r.id}', '${type}')" title="Ver Detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getMonthName(m) {
+            const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            return months[m - 1] || '';
+        }
+
+        /* Funciones del Modal */
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        async function viewDetails(id, type) {
+            const modal = document.getElementById('detailModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+
+            modal.classList.add('active');
+            title.textContent = type === 'purchase' ? 'Detalle de Compra' : 'Detalle de Venta';
+            body.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+
+            try {
+                console.log(`Fetching details for ${type} #${id}...`);
+                let result;
+                if (type === 'purchase') {
+                    result = await API.purchases.getById(id);
+                } else {
+                    result = await API.sales.getById(id);
+                }
+
+                console.log('API Result:', result);
+
+                if (result.success && result.data) {
+                    // Soporte para estructura anidada (cabecera/detalles) o plana
+                    const header = result.data.cabecera || result.data;
+                    const items = result.data.detalles || result.data.products || result.data.items || [];
+
+                    if (!header) {
+                        throw new Error('No se encontraron datos de cabecera');
+                    }
+
+                    console.log('Header:', header);
+                    console.log('Items:', items);
+
+                    const itemsHtml = items.map(item => `
+                        <tr>
+                            <td>${item.nombre || item.producto || item.codigo_producto || 'N/A'}</td>
+                            <td>${item.cantidad}</td>
+                            <td>${Utils.formatCurrency(item.precio)}</td>
+                            <td>${Utils.formatCurrency(item.cantidad * item.precio)}</td>
+                        </tr>
+                    `).join('');
+
+                    const entityName = type === 'purchase'
+                        ? (header.proveedor_nombre || header.nombre_proveedor || header.proveedor || 'Proveedor General')
+                        : (header.cliente_nombre || header.nombre_cliente || header.cliente || 'Cliente General');
+
+                    body.innerHTML = `
+                        <div class="mb-4">
+                            <div class="detail-row">
+                                <span class="detail-label">ID Transacción:</span>
+                                <span>#${header.id || id}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Fecha:</span>
+                                <span>${Utils.formatDate(header.fecha)} ${header.hora || ''}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">${type === 'purchase' ? 'Proveedor' : 'Cliente'}:</span>
+                                <span>${entityName}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Total:</span>
+                                <span class="text-primary fw-bold" style="font-size: 1.2em;">${Utils.formatCurrency(header.monto)}</span>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mb-2">Productos</h5>
+                        <div class="table-container" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+                            <table class="table table-sm sticky-header">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cant.</th>
+                                        <th>Precio</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsHtml || '<tr><td colspan="4" class="text-center">No hay productos detallados</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    console.error('Success false or no data:', result);
+                    body.innerHTML = `<p class="text-danger text-center">Error al cargar detalles: ${result.message || 'Respuesta inválida'}</p>`;
+                }
+            } catch (error) {
+                console.error('Error in viewDetails:', error);
+                body.innerHTML = `<p class="text-danger text-center">Ocurrió un error inesperado: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

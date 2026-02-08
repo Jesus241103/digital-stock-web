@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entradas | Digital Stock</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .cart-table {
+            margin-top: var(--spacing-lg);
+        }
+
+        .cart-total {
+            text-align: right;
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            padding: var(--spacing-lg);
+            border-top: 2px solid var(--color-border);
+        }
+
+        .qty-input {
+            width: 80px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar se inyecta vía JS (layout.js) -->
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+                <div class="page-title-section">
+                    <h1 class="page-title">Entradas de Inventario</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Inicio</a><span>/</span><span>Entradas</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openPurchaseModal()">
+                        <i class="fas fa-plus"></i> Nueva Entrada
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Historial de Entradas</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Proveedor</th>
+                                        <th>Fecha</th>
+                                        <th>Hora</th>
+                                        <th>Monto Total</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="purchasesBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted p-4">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Nueva Entrada -->
+    <div class="modal-overlay" id="purchaseModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title">Nueva Entrada de Inventario</h3>
+                <button class="modal-close" onclick="closePurchaseModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Selección de proveedor -->
+                <div class="form-group">
+                    <label class="form-label">Proveedor</label>
+                    <div class="autocomplete-wrapper" id="providerAutocomplete">
+                        <input type="text" class="form-control" id="providerSearch" placeholder="Buscar proveedor...">
+                        <div class="autocomplete-results" id="providerResults"></div>
+                    </div>
+                    <input type="hidden" id="selectedProvider">
+                </div>
+
+                <!-- Agregar productos -->
+                <div class="form-group">
+                    <label class="form-label">Agregar Producto</label>
+                    <div class="autocomplete-wrapper" id="productAutocomplete">
+                        <input type="text" class="form-control" id="productSearch" placeholder="Buscar producto...">
+                        <div class="autocomplete-results" id="productResults"></div>
+                    </div>
+                </div>
+
+                <!-- Carrito -->
+                <div class="cart-table">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Precio</th>
+                                <th>Cantidad</th>
+                                <th>Subtotal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Agregue productos</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="cart-total"
+                        style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                        <div>Subtotal: <span id="cartSubtotal">$0.00</span></div>
+                        <div>IVA: <span id="cartIva">$0.00</span></div>
+                        <div style="font-size: 1.2rem; font-weight: bold;">Total: <span id="cartTotal">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closePurchaseModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="savePurchase()">
+                    <i class="fas fa-check"></i> Registrar Entrada
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal detalle -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title">Detalle de Entrada #<span id="detailId"></span></h3>
+                <button class="modal-close" onclick="Utils.closeModal('detailModal')"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="detailBody"></div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal receipt-modal-content">
+            <span class="close-btn" onclick="closeReceiptModal()">&times;</span>
+            <div class="receipt-header">
+                <div class="receipt-title">Comprobante de Compra</div>
+                <div class="receipt-id" id="receiptId">#000000</div>
+            </div>
+            <div class="receipt-details">
+                <div class="receipt-row">
+                    <span>Fecha:</span>
+                    <span id="receiptDate">DD/MM/YYYY</span>
+                </div>
+                <div class="receipt-row">
+                    <span>Proveedor:</span>
+                    <span id="receiptProvider">Nombre Proveedor</span>
+                </div>
+            </div>
+            <div class="receipt-row">
+                <span>Subtotal:</span>
+                <span id="receiptSubtotal">$0.00</span>
+            </div>
+            <div class="receipt-row">
+                <span>IVA:</span>
+                <span id="receiptIva">$0.00</span>
+            </div>
+            <div class="receipt-total">
+                <span>Total:</span>
+                <span id="receiptTotal">$0.00</span>
+            </div>
+            <div id="receiptEmailMsg" class="receipt-email-info"></div>
+            <div class="form-actions" style="justify-content: center; margin-top: 2rem;">
+                <button type="button" class="btn btn-primary" onclick="closeReceiptModal()">Aceptar</button>
+            </div>
+        </div>
+    </div>
+    <script src="../js/utils.js"></script>
+    <script src="../js/layout.js"></script>
+    <script>
+        const user = API.getUser();
+        let cart = [];
+        let allProducts = [];
+
+        // Cargar historial
+        async function loadPurchases() {
+            const result = await API.purchases.getAll();
+            const tbody = document.getElementById('purchasesBody');
+
+            if (result.success && result.data.length > 0) {
+                tbody.innerHTML = result.data.map(p => `
+                    <tr>
+                        <td><strong>#${p.id}</strong></td>
+                        <td>${Utils.escapeHtml(p.proveedor_nombre || p.proveedor_codigo)}</td>
+                        <td>${Utils.formatDate(p.fecha)}</td>
+                        <td>${p.hora || '-'}</td>
+                        <td><strong>${Utils.formatCurrency(p.monto)}</strong></td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm" onclick="viewDetail(${p.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay entradas registradas</td></tr>';
+            }
+        }
+
+        // Autocomplete proveedor
+        const providerSearch = document.getElementById('providerSearch');
+        const providerResults = document.getElementById('providerResults');
+
+        const handleProviderSearch = Utils.debounce(async () => {
+            const q = providerSearch.value.trim();
+            // Búsqueda silenciosa (skipLoader: true)
+            const result = await API.providers.search(q, { skipLoader: true });
+
+            if (result.success && result.data.length > 0) {
+                providerResults.innerHTML = result.data.map(p => `
+                    <div class="autocomplete-item" onclick="selectProvider('${p.codigo}', '${Utils.escapeHtml(p.nombre)}')">
+                        <strong>${Utils.escapeHtml(p.nombre)}</strong> <small>(${p.codigo})</small>
+                    </div>
+                `).join('');
+                document.getElementById('providerAutocomplete').classList.add('active');
+            } else {
+                providerResults.innerHTML = '<div class="autocomplete-item">No se encontraron proveedores</div>';
+                document.getElementById('providerAutocomplete').classList.add('active');
+            }
+        }, 300);
+
+        providerSearch.addEventListener('input', handleProviderSearch);
+        providerSearch.addEventListener('focus', handleProviderSearch);
+
+        // Cerrar al hacer click fuera
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('providerAutocomplete');
+            if (!wrapper.contains(e.target)) {
+                wrapper.classList.remove('active');
+            }
+        });
+
+        function selectProvider(codigo, nombre) {
+            document.getElementById('selectedProvider').value = codigo;
+            providerSearch.value = nombre;
+            document.getElementById('providerAutocomplete').classList.remove('active');
+        }
+
+        // Buscar productos
+        const productSearch = document.getElementById('productSearch');
+        const productResults = document.getElementById('productResults');
+
+        const handleProductSearch = Utils.debounce(async () => {
+            const q = productSearch.value.trim();
+            // Usar API.products.search con skipLoader
+            const result = await API.products.search(q, { skipLoader: true });
+
+            if (result.success && result.data.length > 0) {
+                productResults.innerHTML = result.data.map(p => `
+                    <div class="autocomplete-item" onclick="addToCart('${p.codigo}', '${Utils.escapeHtml(p.nombre)}', ${p.precio}, ${p.iva || 0})">
+                        <strong>${Utils.escapeHtml(p.nombre)}</strong> - Stock: ${p.cantidad} <br>
+                        <small>Código: ${p.codigo} | Precio: ${Utils.formatCurrency(p.precio)}</small>
+                    </div>
+                `).join('');
+                document.getElementById('productAutocomplete').classList.add('active');
+            } else {
+                productResults.innerHTML = '<div class="autocomplete-item">No se encontraron productos</div>';
+                document.getElementById('productAutocomplete').classList.add('active');
+            }
+        }, 300);
+
+        productSearch.addEventListener('input', handleProductSearch);
+        productSearch.addEventListener('focus', handleProductSearch);
+
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('productAutocomplete');
+            if (!wrapper.contains(e.target)) {
+                wrapper.classList.remove('active');
+            }
+        });
+
+        function addToCart(codigo, nombre, precio, iva) {
+            const existing = cart.find(item => item.codigo === codigo);
+            if (existing) {
+                existing.cantidad++;
+            } else {
+                cart.push({ codigo, nombre, precio, iva: iva || 0, cantidad: 1 });
+            }
+            renderCart();
+            productSearch.value = '';
+            document.getElementById('productAutocomplete').classList.remove('active');
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartBody');
+            if (cart.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Agregue productos</td></tr>';
+                document.getElementById('cartSubtotal').textContent = '$0.00';
+                document.getElementById('cartIva').textContent = '$0.00';
+                document.getElementById('cartTotal').textContent = '$0.00';
+                return;
+            }
+
+            tbody.innerHTML = cart.map((item, idx) => {
+                return `
+                <tr>
+                    <td>${item.codigo}</td>
+                    <td>${Utils.escapeHtml(item.nombre)}</td>
+                    <td>${Utils.formatCurrency(item.precio)}</td>
+                    <td>
+                        <input type="number" class="form-control qty-input" value="${item.cantidad}"
+                            min="1" onchange="updateQty(${idx}, this.value)">
+                    </td>
+                    <td>${Utils.formatCurrency(item.precio * item.cantidad)}</td>
+                    <td>
+                        <button class="btn btn-ghost btn-sm text-danger" onclick="removeFromCart(${idx})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            const subtotal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            const totalIva = cart.reduce((sum, item) => sum + (item.precio * item.cantidad * ((item.iva || 0) / 100)), 0);
+            const total = subtotal + totalIva;
+
+            document.getElementById('cartSubtotal').textContent = Utils.formatCurrency(subtotal);
+            document.getElementById('cartIva').textContent = Utils.formatCurrency(totalIva);
+            document.getElementById('cartTotal').textContent = Utils.formatCurrency(total);
+        }
+
+        function updateQty(idx, qty) {
+            cart[idx].cantidad = parseInt(qty) || 1;
+            renderCart();
+        }
+
+        function removeFromCart(idx) {
+            cart.splice(idx, 1);
+            renderCart();
+        }
+
+        function openPurchaseModal() {
+            cart = [];
+            renderCart();
+            document.getElementById('selectedProvider').value = '';
+            document.getElementById('providerSearch').value = '';
+            Utils.openModal('purchaseModal');
+        }
+
+        function closePurchaseModal() {
+            Utils.closeModal('purchaseModal');
+        }
+
+        async function savePurchase() {
+            const provider = document.getElementById('selectedProvider').value;
+            if (!provider) {
+                Utils.error('Seleccione un proveedor');
+                return;
+            }
+            if (cart.length === 0) {
+                Utils.error('Agregue al menos un producto');
+                return;
+            }
+
+            const details = cart.map(item => ({
+                codigo: item.codigo,
+                nombre: item.nombre,
+                cantidad: item.cantidad,
+                precio: item.precio
+            }));
+
+            const result = await API.purchases.create({
+                proveedor_cedula: provider,
+                productos: details
+            });
+
+            if (result.success) {
+                // Mostrar comprobante
+                showReceipt(result.data);
+
+                // Limpiar formulario
+                cart = [];
+                renderCart(); // Fix: call renderCart instead of just clearing array
+                document.getElementById('productSearch').value = '';
+                document.getElementById('providerSearch').value = '';
+                document.getElementById('selectedProvider').value = '';
+                closePurchaseModal(); // Use specific closing function
+                loadPurchases();
+            } else {
+                Utils.error(result.message);
+            }
+        }
+
+        function showReceipt(data) {
+            // Updated to use Utils.openModal which handles visibility class
+            document.getElementById('receiptId').textContent = '#' + String(data.id).padStart(6, '0');
+            document.getElementById('receiptDate').textContent = `${data.fecha} ${data.hora}`;
+            document.getElementById('receiptProvider').textContent = data.proveedor ? data.proveedor.nombre : 'Proveedor General';
+            document.getElementById('receiptSubtotal').textContent = Utils.formatCurrency(data.subtotal);
+            document.getElementById('receiptIva').textContent = Utils.formatCurrency(data.iva);
+            document.getElementById('receiptTotal').textContent = Utils.formatCurrency(data.monto);
+
+            const emailDiv = document.getElementById('receiptEmailMsg');
+            if (data.proveedor && data.proveedor.email && data.proveedor.email.includes('@')) {
+                emailDiv.style.display = 'flex';
+                emailDiv.innerHTML = `<i class="fas fa-check-circle"></i> Comprobante enviado a: <strong>${Utils.escapeHtml(data.proveedor.email)}</strong>`;
+            } else {
+                emailDiv.style.display = 'none';
+            }
+
+            Utils.openModal('receiptModal');
+        }
+
+        function closeReceiptModal() {
+            Utils.closeModal('receiptModal');
+        }
+
+
+        async function viewDetail(id) {
+            const result = await API.purchases.getById(id);
+            if (result.success) {
+                document.getElementById('detailId').textContent = id;
+                const d = result.data;
+                document.getElementById('detailBody').innerHTML = `
+                <p><strong>Proveedor:</strong> ${Utils.escapeHtml(d.cabecera.proveedor || d.cabecera.cedula)}</p>
+                <p><strong>Fecha:</strong> ${Utils.formatDate(d.cabecera.fecha)} ${d.cabecera.hora || ''}</p>
+                <table class="table mt-3">
+                    <thead>
+                        <tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr>
+                    </thead>
+                    <tbody>
+                        ${d.detalles.map(det => `
+                                <tr>
+                                    <td>${det.codigo_producto}</td>
+                                    <td>${Utils.escapeHtml(det.nombre)}</td>
+                                    <td>${det.cantidad}</td>
+                                    <td>${Utils.formatCurrency(det.precio)}</td>
+                                    <td>${Utils.formatCurrency(det.precio * det.cantidad)}</td>
+                                </tr>
+                            `).join('')}
+                    </tbody>
+                </table>
+                <div class="cart-total">Total: ${Utils.formatCurrency(d.cabecera.monto)}</div>
+                `;
+                Utils.openModal('detailModal');
+            }
+        }
+
+        loadPurchases();
+    </script>
+</body>
+
+</html>

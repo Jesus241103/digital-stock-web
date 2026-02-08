@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Digital Stock - Sistema de Inventario Web">
+    <title>Registro | Digital Stock</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        /* Estilos específicos del registro */
+        .register-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+            background: var(--gradient-dark);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .register-page::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 480px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .register-card {
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .register-logo {
+            width: 70px;
+            height: 70px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--spacing-lg);
+            font-size: 2rem;
+            color: white;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .register-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .register-subtitle {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .register-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+
+        @media (max-width: 500px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .register-footer {
+            text-align: center;
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--color-border);
+        }
+
+        .register-footer p {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .register-footer a {
+            color: var(--color-accent-primary);
+            font-weight: 500;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--color-danger-light);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: var(--color-success-light);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="register-page">
+        <div class="register-container">
+            <div class="register-card animate-scale-in">
+                <div class="register-header">
+                    <div class="register-logo">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h1 class="register-title">Crear Cuenta</h1>
+                    <p class="register-subtitle">Complete los datos para registrarse</p>
+                </div>
+
+                <form class="register-form" id="registerForm">
+                    <div class="error-message" id="errorMessage"></div>
+                    <div class="success-message" id="successMessage"></div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="cedula">Cédula</label>
+                            <div class="input-icon-wrapper">
+                                <i class="input-icon fas fa-id-card"></i>
+                                <input type="text" class="form-control" id="cedula" placeholder="Ej: 12345678" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="telefono">Teléfono</label>
+                            <div class="input-icon-wrapper">
+                                <i class="input-icon fas fa-phone"></i>
+                                <input type="text" class="form-control" id="telefono" placeholder="Ej: 04121234567"
+                                    required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="nombre">Nombre Completo</label>
+                        <div class="input-icon-wrapper">
+                            <i class="input-icon fas fa-user"></i>
+                            <input type="text" class="form-control" id="nombre" placeholder="Ingrese su nombre"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="clave">Contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <i class="input-icon fas fa-lock"></i>
+                            <input type="password" class="form-control" id="clave" placeholder="Mínimo 5 caracteres"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="confirmarClave">Confirmar Contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <i class="input-icon fas fa-lock"></i>
+                            <input type="password" class="form-control" id="confirmarClave"
+                                placeholder="Repita la contraseña" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-full" id="registerBtn">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Crear Cuenta</span>
+                    </button>
+                </form>
+
+                <div class="register-footer">
+                    <p>¿Ya tienes una cuenta? <a href="login.html">Inicia sesión</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script>
+        // Redirigir si ya está autenticado
+        if (API.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+
+        // Manejar formulario de registro
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const cedula = document.getElementById('cedula').value.trim();
+            const nombre = document.getElementById('nombre').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const clave = document.getElementById('clave').value;
+            const confirmarClave = document.getElementById('confirmarClave').value;
+
+            const errorEl = document.getElementById('errorMessage');
+            const successEl = document.getElementById('successMessage');
+            const btn = document.getElementById('registerBtn');
+
+            // Ocultar mensajes
+            errorEl.classList.remove('show');
+            successEl.classList.remove('show');
+
+            // Validaciones
+            const validations = [
+                Utils.validateCedula(cedula),
+                Utils.validateName(nombre),
+                Utils.validatePhone(telefono),
+                Utils.validatePassword(clave)
+            ];
+
+            for (const v of validations) {
+                if (!v.valid) {
+                    errorEl.textContent = v.message;
+                    errorEl.classList.add('show');
+                    return;
+                }
+            }
+
+            if (clave !== confirmarClave) {
+                errorEl.textContent = 'Las contraseñas no coinciden';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            // Deshabilitar botón
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner spinner-sm"></span> Registrando...';
+
+            // Enviar registro
+            const result = await API.register({
+                cedula: parseInt(cedula),
+                nombre,
+                tlfn: telefono,
+                clave
+            });
+
+            if (result.success) {
+                successEl.textContent = '¡Registro exitoso! Redirigiendo al login...';
+                successEl.classList.add('show');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+            } else {
+                errorEl.textContent = result.message || 'Error al registrar';
+                errorEl.classList.add('show');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-plus"></i> <span>Crear Cuenta</span>';
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios | Digital Stock</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar se inyecta vía JS (layout.js) -->
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+                <div class="page-title-section">
+                    <h1 class="page-title">Gestión de Usuarios</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Inicio</a><span>/</span><span>Usuarios</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Cédula</th>
+                                        <th>Nombre</th>
+                                        <th>Teléfono</th>
+                                        <th>Rol</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted p-4">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Editar Usuario -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Editar Usuario</h3>
+                <button class="modal-close" onclick="closeUserModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label class="form-label">Cédula</label>
+                        <input type="text" class="form-control" id="userCedula" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="userNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="userTelefono" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rol</label>
+                        <select class="form-control form-select" id="userRol">
+                            <option value="user">Usuario</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nueva Contraseña (dejar vacío para no cambiar)</label>
+                        <input type="password" class="form-control" id="userClave" placeholder="Nueva contraseña">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeUserModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/layout.js"></script>
+    <script>
+        const user = API.getUser();
+        if (!user || user.rol !== 'admin') {
+            Utils.error('Acceso denegado');
+            window.location.href = 'dashboard.html';
+        }
+
+        let editingCedula = null;
+
+        async function loadUsers() {
+            const result = await API.users.getAll();
+            const tbody = document.getElementById('usersBody');
+
+            if (result.success && result.data.length > 0) {
+                tbody.innerHTML = result.data.map(u => `
+                    <tr>
+                        <td><strong>${u.cedula}</strong></td>
+                        <td>${Utils.escapeHtml(u.nombre)}</td>
+                        <td>${u.tlfn || '-'}</td>
+                        <td><span class="badge ${u.rol === 'admin' ? 'badge-info' : 'badge-success'}">${u.rol}</span></td>
+                        <td class="table-actions">
+                            <button class="btn btn-ghost btn-sm" onclick="editUser(${u.cedula})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-ghost btn-sm text-danger" onclick="deleteUser(${u.cedula})" ${u.cedula == user.cedula ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">No hay usuarios</td></tr>';
+            }
+        }
+
+        async function editUser(cedula) {
+            const result = await API.users.getByCedula(cedula);
+            if (result.success) {
+                editingCedula = cedula;
+                const u = result.data;
+                document.getElementById('userCedula').value = u.cedula;
+                document.getElementById('userNombre').value = u.nombre;
+                document.getElementById('userTelefono').value = u.tlfn || '';
+                document.getElementById('userRol').value = u.rol;
+                document.getElementById('userClave').value = '';
+                Utils.openModal('userModal');
+            }
+        }
+
+        function closeUserModal() { Utils.closeModal('userModal'); }
+
+        async function saveUser() {
+            const data = {
+                nombre: document.getElementById('userNombre').value,
+                tlfn: document.getElementById('userTelefono').value,
+                rol: document.getElementById('userRol').value
+            };
+
+            const newPassword = document.getElementById('userClave').value;
+            if (newPassword) {
+                data.clave = newPassword;
+            }
+
+            const result = await API.users.update(editingCedula, data);
+            if (result.success) {
+                Utils.success(result.message);
+                closeUserModal();
+                loadUsers();
+            } else {
+                Utils.error(result.message);
+            }
+        }
+
+        async function deleteUser(cedula) {
+            if (cedula == user.cedula) {
+                Utils.error('No puede eliminarse a sí mismo');
+                return;
+            }
+            Utils.confirm('¿Eliminar este usuario?', async () => {
+                const result = await API.users.delete(cedula);
+                result.success ? Utils.success(result.message) : Utils.error(result.message);
+                loadUsers();
+            }, 'Eliminar');
+        }
+
+        loadUsers();
+    </script>
+</body>
+
+</html>

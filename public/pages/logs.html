@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitácora | Digital Stock</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar se inyecta vía JS (layout.js) -->
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+                <div class="page-title-section">
+                    <h1 class="page-title">Bitácora del Sistema</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Inicio</a><span>/</span><span>Bitácora</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="filters-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por usuario, cédula o acción...">
+                    </div>
+                    <select class="filter-select form-control" id="actionFilter">
+                        <option value="">Todas las acciones</option>
+                    </select>
+                </div>
+
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Usuario</th>
+                                        <th>Nombre</th>
+                                        <th>Fecha</th>
+                                        <th>Hora</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted p-4">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/layout.js"></script>
+    <script>
+        const user = API.getUser();
+        if (!user || user.rol !== 'admin') {
+            Utils.error('Acceso denegado');
+            window.location.href = 'dashboard.html';
+        }
+
+        async function loadActions() {
+            const result = await API.logs.getActions();
+            if (result.success) {
+                const select = document.getElementById('actionFilter');
+                // Mantener la opción por defecto y añadir las dinámicas
+                const options = result.data.map(action => `<option value="${action}">${action}</option>`).join('');
+                select.innerHTML = '<option value="">Todas las acciones</option>' + options;
+            }
+        }
+
+        async function loadLogs() {
+            const search = document.getElementById('searchInput').value.trim();
+            const action = document.getElementById('actionFilter').value;
+
+            // Por defecto limitamos a 100 si no hay filtros específicos para evitar sobrecarga
+            const params = { limit: 100 };
+
+            if (search) params.search = search;
+            if (action) params.accion = action;
+
+            const result = await API.logs.getAll(params);
+            const tbody = document.getElementById('logsBody');
+
+            if (result.success && result.data.length > 0) {
+                tbody.innerHTML = result.data.map(log => `
+                    <tr>
+                        <td>${log.id}</td>
+                        <td><strong>${log.cedula}</strong></td>
+                        <td>${Utils.escapeHtml(log.nombre)}</td>
+                        <td>${Utils.formatDate(log.fecha)}</td>
+                        <td>${log.hora || '-'}</td>
+                        <td>${Utils.escapeHtml(log.accion)}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay registros encontrados</td></tr>';
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', Utils.debounce(loadLogs, 300));
+        document.getElementById('actionFilter').addEventListener('change', loadLogs);
+
+        // Inicializar
+        loadActions();
+        loadLogs();
+    </script>
+</body>
+
+</html>

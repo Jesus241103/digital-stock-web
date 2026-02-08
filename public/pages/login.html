@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Digital Stock - Sistema de Inventario Web">
+    <title>Iniciar Sesión | Digital Stock</title>
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* Estilos específicos del login */
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+            background: var(--gradient-dark);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-page::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-card {
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--spacing-lg);
+            font-size: 2.5rem;
+            color: white;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .login-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .login-title span {
+            color: var(--color-accent-primary);
+        }
+
+        .login-subtitle {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--color-border);
+        }
+
+        .login-footer p {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .login-footer a {
+            color: var(--color-accent-primary);
+            font-weight: 500;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--color-danger-light);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm);
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-container">
+            <div class="login-card animate-scale-in">
+                <div class="login-header">
+                    <div class="login-logo">
+                        <i class="fas fa-boxes-stacked"></i>
+                    </div>
+                    <h1 class="login-title">Digital <span>Stock</span></h1>
+                    <p class="login-subtitle">Sistema de Inventario</p>
+                </div>
+
+                <form class="login-form" id="loginForm">
+                    <div class="error-message" id="errorMessage"></div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="cedula">Cédula</label>
+                        <div class="input-icon-wrapper">
+                            <i class="input-icon fas fa-id-card"></i>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="cedula" 
+                                name="cedula"
+                                placeholder="Ingrese su cédula"
+                                required
+                                autocomplete="username"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="clave">Contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <i class="input-icon fas fa-lock"></i>
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                id="clave" 
+                                name="clave"
+                                placeholder="Ingrese su contraseña"
+                                required
+                                autocomplete="current-password"
+                            >
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-full" id="loginBtn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Iniciar Sesión</span>
+                    </button>
+                </form>
+
+                <div class="login-footer">
+                    <p>¿No tienes una cuenta? <a href="register.html">Regístrate aquí</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script>
+        // Redirigir si ya está autenticado
+        if (API.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+
+        // Manejar formulario de login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const cedula = document.getElementById('cedula').value.trim();
+            const clave = document.getElementById('clave').value;
+            const errorEl = document.getElementById('errorMessage');
+            const btn = document.getElementById('loginBtn');
+
+            // Validar
+            const cedulaValidation = Utils.validateCedula(cedula);
+            if (!cedulaValidation.valid) {
+                errorEl.textContent = cedulaValidation.message;
+                errorEl.classList.add('show');
+                return;
+            }
+
+            // Deshabilitar botón
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner spinner-sm"></span> Ingresando...';
+            errorEl.classList.remove('show');
+
+            // Intentar login
+            const result = await API.login(parseInt(cedula), clave);
+
+            if (result.success) {
+                Utils.success('¡Bienvenido!');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 500);
+            } else {
+                errorEl.textContent = result.message || 'Credenciales inválidas';
+                errorEl.classList.add('show');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Iniciar Sesión</span>';
+            }
+        });
+    </script>
+</body>
+</html>

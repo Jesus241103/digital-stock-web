@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes | Digital Stock</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar se inyecta vía JS (layout.js) -->
+
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="mobile-menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+                <div class="page-title-section">
+                    <h1 class="page-title">Clientes</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Inicio</a><span>/</span><span>Clientes</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openClientModal()">
+                        <i class="fas fa-plus"></i> Nuevo Cliente
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Filtros -->
+                <div class="filters-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por cédula o nombre...">
+                    </div>
+                </div>
+
+                <!-- Tabla -->
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table" id="clientsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Cédula</th>
+                                        <th>Nombre</th>
+                                        <th>Teléfono</th>
+                                        <th>Email</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientsBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted p-4">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="clientModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Nuevo Cliente</h3>
+                <button class="modal-close" onclick="closeClientModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="clientForm">
+                    <div class="form-group">
+                        <label class="form-label">Cédula</label>
+                        <input type="text" class="form-control" id="clientCedula" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="clientNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="clientTelefono" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="clientEmail" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeClientModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/layout.js"></script>
+    <script>
+        const user = API.getUser();
+        let editingCedula = null;
+
+        async function loadClients() {
+            const search = document.getElementById('searchInput').value.trim();
+            const result = await API.clients.getAll(search ? { search } : {});
+            const tbody = document.getElementById('clientsBody');
+
+            if (result.success && result.data.length > 0) {
+                tbody.innerHTML = result.data.map(c => `
+                    <tr>
+                        <td><strong>${c.cedula}</strong></td>
+                        <td>${Utils.escapeHtml(c.nombre)}</td>
+                        <td>${c.telefono || '-'}</td>
+                        <td>${Utils.escapeHtml(c.email || '-')}</td>
+                        <td class="table-actions">
+                            <button class="btn btn-ghost btn-sm" onclick="editClient('${c.cedula}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-ghost btn-sm text-danger" onclick="deleteClient('${c.cedula}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">No hay clientes</td></tr>';
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', Utils.debounce(loadClients, 300));
+
+        function openClientModal() {
+            editingCedula = null;
+            document.getElementById('modalTitle').textContent = 'Nuevo Cliente';
+            document.getElementById('clientForm').reset();
+            document.getElementById('clientCedula').disabled = false;
+            Utils.openModal('clientModal');
+        }
+
+        function closeClientModal() { Utils.closeModal('clientModal'); }
+
+        async function editClient(cedula) {
+            const result = await API.clients.getByCedula(cedula);
+            if (result.success) {
+                editingCedula = cedula;
+                const c = result.data;
+                document.getElementById('modalTitle').textContent = 'Editar Cliente';
+                document.getElementById('clientCedula').value = c.cedula;
+                document.getElementById('clientCedula').disabled = true;
+                document.getElementById('clientNombre').value = c.nombre;
+                document.getElementById('clientTelefono').value = c.telefono || '';
+                document.getElementById('clientEmail').value = c.email || '';
+                Utils.openModal('clientModal');
+            }
+        }
+
+        async function saveClient() {
+            const data = {
+                cedula: document.getElementById('clientCedula').value,
+                nombre: document.getElementById('clientNombre').value,
+                telefono: document.getElementById('clientTelefono').value,
+                email: document.getElementById('clientEmail').value
+            };
+
+            const v1 = Utils.validateCedula(data.cedula);
+            if (!v1.valid && !editingCedula) { Utils.error(v1.message); return; }
+            const v2 = Utils.validateName(data.nombre);
+            if (!v2.valid) { Utils.error(v2.message); return; }
+
+            let result = editingCedula
+                ? await API.clients.update(editingCedula, data)
+                : await API.clients.create(data);
+
+            if (result.success) {
+                Utils.success(result.message);
+                closeClientModal();
+                loadClients();
+            } else {
+                Utils.error(result.message);
+            }
+        }
+
+        async function deleteClient(cedula) {
+            Utils.confirm('¿Eliminar este cliente?', async () => {
+                const result = await API.clients.delete(cedula);
+                result.success ? Utils.success(result.message) && loadClients() : Utils.error(result.message);
+                loadClients();
+            }, 'Eliminar');
+        }
+
+        loadClients();
+    </script>
+</body>
+
+</html>
