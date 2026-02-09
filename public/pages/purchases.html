@@ -50,6 +50,14 @@
             </header>
 
             <div class="content-area">
+                <!-- Filtros -->
+                <div class="filters-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por ID, proveedor o código...">
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Historial de Entradas</h3>
@@ -202,16 +210,27 @@
 
         // Cargar historial
         async function loadPurchases() {
-            const result = await API.purchases.getAll();
+            const search = document.getElementById('searchInput').value.trim();
+            const params = { limit: 50 };
+
+            if (search) {
+                params.search = search;
+            }
+
+            const result = await API.purchases.getAll(params);
             const tbody = document.getElementById('purchasesBody');
 
             if (result.success && result.data.length > 0) {
                 tbody.innerHTML = result.data.map(p => `
                     <tr>
                         <td><strong>#${p.id}</strong></td>
-                        <td>${Utils.escapeHtml(p.proveedor_nombre || p.proveedor_codigo)}</td>
+                        <td>
+                            <strong>${Utils.escapeHtml(p.proveedor_nombre || 'N/A')}</strong>
+                            <br>
+                            <span class="text-muted small">${p.proveedor_codigo || ''}</span>
+                        </td>
                         <td>${Utils.formatDate(p.fecha)}</td>
-                        <td>${p.hora || '-'}</td>
+                        <td>${p.hora}</td>
                         <td><strong>${Utils.formatCurrency(p.monto)}</strong></td>
                         <td>
                             <button class="btn btn-ghost btn-sm" onclick="viewDetail(${p.id})">
@@ -221,10 +240,17 @@
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay entradas registradas</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay registros encontrados</td></tr>';
             }
         }
 
+        // Event Listeners
+        document.getElementById('searchInput').addEventListener('input', Utils.debounce(loadPurchases, 300));
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPurchases();
+        });
         // Autocomplete proveedor
         const providerSearch = document.getElementById('providerSearch');
         const providerResults = document.getElementById('providerResults');

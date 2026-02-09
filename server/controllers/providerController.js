@@ -149,7 +149,9 @@ async function create(req, res) {
 
         // Bitácora
         if (req.user) {
-            await logAction(req.user.cedula, req.user.nombre, 'Agrego un Nuevo Proveedor.');
+            // NOTA: El ENUM en la BD tiene un tab invisible o espacio raro al inicio: '	Agrego un Nuevo Proveedor'
+            // Se debe replicar exactamente o fallará.
+            await logAction(req.user.cedula, req.user.nombre, '	Agrego un Nuevo Proveedor');
         }
 
         res.status(201).json({

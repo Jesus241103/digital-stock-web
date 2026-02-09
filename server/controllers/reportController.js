@@ -332,9 +332,60 @@ async function getChartData(req, res) {
     }
 }
 
+/**
+ * Obtener tasa del dólar (BCV)
+ * GET /api/reports/dollar-rate
+ */
+function getDollarRate(req, res) {
+    const { exec } = require('child_process');
+    const path = require('path');
+
+    // Ruta al script en la raíz del proyecto
+    const scriptPath = path.join(__dirname, '../../extract-dolar.js');
+
+    exec(`node "${scriptPath}"`, (error, stdout, stderr) => {
+        if (error) {
+            console.error('Error al ejecutar script de dólar:', error);
+            return res.json({
+                success: false,
+                message: 'Error al ejecutar script de obtención de tasa',
+                rate: null
+            });
+        }
+
+        // El script imprime "dolar= 62,50" o "dolar=-1"
+        // Buscamos la línea que contiene "dolar="
+        const match = stdout.match(/dolar=\s*([\d,.-]+)/);
+
+        if (match && match[1]) {
+            // Reemplazar coma por punto para parsear
+            let rateStr = match[1].replace(',', '.');
+            let rate = parseFloat(rateStr);
+
+            if (!isNaN(rate) && rate > 0) {
+                return res.json({
+                    success: true,
+                    rate: rate,
+                    formatted: rate.toFixed(2),
+                    source: 'BCV'
+                });
+            }
+        }
+
+        // Si llegamos aquí, no se pudo obtener un valor válido
+        console.warn('No se pudo obtener tasa del dólar. Salida:', stdout);
+        res.json({
+            success: false,
+            message: 'No se pudo obtener la tasa del día',
+            rate: null
+        });
+    });
+}
+
 module.exports = {
     getDashboardStats,
     getMonthlyReport,
     getBiweeklyReport,
-    getChartData
+    getChartData,
+    getDollarRate
 };

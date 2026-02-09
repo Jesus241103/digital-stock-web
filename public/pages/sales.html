@@ -55,6 +55,14 @@
             </header>
 
             <div class="content-area">
+                <!-- Filtros -->
+                <div class="filters-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por ID, cliente o código...">
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Historial de Salidas</h3>
@@ -207,19 +215,29 @@
     <script src="../js/layout.js"></script>
     <script>
         const user = API.getUser();
-        let cart = [];
-
+        // Cargar historial
         async function loadSales() {
-            const result = await API.sales.getAll();
+            const search = document.getElementById('searchInput').value.trim();
+            const params = { limit: 50 };
+
+            if (search) {
+                params.search = search;
+            }
+
+            const result = await API.sales.getAll(params);
             const tbody = document.getElementById('salesBody');
 
             if (result.success && result.data.length > 0) {
                 tbody.innerHTML = result.data.map(s => `
                     <tr>
                         <td><strong>#${s.id}</strong></td>
-                        <td>${Utils.escapeHtml(s.cliente_nombre || s.cliente_cedula)}</td>
+                         <td>
+                            <strong>${Utils.escapeHtml(s.cliente_nombre || 'N/A')}</strong>
+                            <br>
+                            <span class="text-muted small">${s.cliente_cedula || ''}</span>
+                        </td>
                         <td>${Utils.formatDate(s.fecha)}</td>
-                        <td>${s.hora || '-'}</td>
+                        <td>${s.hora}</td>
                         <td><strong>${Utils.formatCurrency(s.monto)}</strong></td>
                         <td>
                             <button class="btn btn-ghost btn-sm" onclick="viewDetail(${s.id})">
@@ -229,11 +247,17 @@
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay salidas registradas</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay registros encontrados</td></tr>';
             }
         }
 
-        // Autocomplete cliente
+        // Event Listeners
+        document.getElementById('searchInput').addEventListener('input', Utils.debounce(loadSales, 300));
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSales();
+        });// Autocomplete cliente
         const clientSearch = document.getElementById('clientSearch');
         const clientResults = document.getElementById('clientResults');
 

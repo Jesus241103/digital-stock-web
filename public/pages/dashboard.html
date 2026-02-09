@@ -121,6 +121,76 @@
             padding: var(--spacing-sm) var(--spacing-md);
             font-size: var(--font-size-sm);
         }
+
+        /* Estilos específicos para el widget de dólar */
+        .dollar-widget {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 12px;
+            color: #2ecc71;
+            transition: all 0.3s ease;
+        }
+
+        .dollar-widget:hover {
+            background: rgba(34, 197, 94, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .dollar-widget.error {
+            background: rgba(231, 76, 60, 0.1);
+            border-color: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        .dollar-icon {
+            font-size: 1.4rem;
+        }
+
+        .dollar-info {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .dollar-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            opacity: 0.8;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .dollar-amount {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        /* Estilo mejorado para el select de año */
+        .chart-year-select {
+            background: var(--color-bg-input);
+            border: 1px solid var(--color-border);
+            color: var(--color-text-primary);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+            transition: border-color var(--transition-fast);
+            appearance: none;
+            /* Quitar estilo por defecto */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        .chart-year-select:focus {
+            border-color: var(--color-accent-primary);
+        }
     </style>
 </head>
 
@@ -141,35 +211,44 @@
                         <a href="#">Inicio</a>
                         <span>/</span>
                         <span>Dashboard</span>
+                        <span class="text-muted mx-2">|</span>
+                        <span id="currentDate"></span>
                     </div>
                 </div>
                 <div class="header-actions">
-                    <span class="text-sm text-muted" id="currentDate"></span>
+                    <!-- Widget de Tasa de Cambio (Reemplaza botón nueva compra) -->
+                    <div id="dollarWidget" class="dollar-widget" style="display: none;">
+                        <i class="fas fa-sack-dollar dollar-icon"></i>
+                        <div class="dollar-info">
+                            <span class="dollar-label">Tasa BCV</span>
+                            <span class="dollar-amount" id="dollarValue">--.--</span>
+                        </div>
+                    </div>
                 </div>
             </header>
 
             <div class="content-area">
                 <!-- KPIs -->
-                <div class="dashboard-grid" id="kpiGrid">
-                    <div class="kpi-card animate-fade-in" style="animation-delay: 0.1s;">
+                <div class="grid-cols-4" style="margin-bottom: var(--spacing-xl);">
+                    <div class="kpi-card info animate-fade-in" style="animation-delay: 0.1s;">
                         <div class="kpi-icon"><i class="fas fa-box"></i></div>
-                        <div class="kpi-value" id="kpiProducts">0</div>
+                        <div class="kpi-value" id="kpiProducts">-</div>
                         <div class="kpi-label">Productos</div>
                     </div>
                     <div class="kpi-card success animate-fade-in" style="animation-delay: 0.2s;">
                         <div class="kpi-icon"><i class="fas fa-users"></i></div>
-                        <div class="kpi-value" id="kpiClients">0</div>
+                        <div class="kpi-value" id="kpiClients">-</div>
                         <div class="kpi-label">Clientes</div>
                     </div>
-                    <div class="kpi-card info animate-fade-in" style="animation-delay: 0.3s;">
+                    <div class="kpi-card warning animate-fade-in" style="animation-delay: 0.3s;">
                         <div class="kpi-icon"><i class="fas fa-truck"></i></div>
-                        <div class="kpi-value" id="kpiProviders">0</div>
+                        <div class="kpi-value" id="kpiProviders">-</div>
                         <div class="kpi-label">Proveedores</div>
                     </div>
-                    <div class="kpi-card warning animate-fade-in" style="animation-delay: 0.4s;">
-                        <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <div class="kpi-value" id="kpiInventory">$0</div>
-                        <div class="kpi-label">Valor Inventario</div>
+                    <div class="kpi-card danger animate-fade-in" style="animation-delay: 0.4s;">
+                        <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+                        <div class="kpi-value" id="kpiInventory">-</div>
+                        <div class="kpi-label">Valor Inventario ($)</div>
                     </div>
                 </div>
 
@@ -182,8 +261,7 @@
                                 <h3 class="card-title">Transacciones del Mes</h3>
                                 <span class="card-subtitle">Compras vs Ventas</span>
                             </div>
-                            <select id="chartYear" class="form-select"
-                                style="width: auto; padding: 4px 8px; font-size: 0.9rem;">
+                            <select id="chartYear" class="chart-year-select">
                                 <option value="2025">2025</option>
                                 <option value="2026">2026</option>
                             </select>
@@ -401,34 +479,19 @@
                             </div>
                         `).join('');
                     } else {
-                        alertList.innerHTML = `
-                            <div class="empty-state" style="padding: var(--spacing-lg);">
-                                <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
-                                <p class="text-muted mt-2">Sin alertas de stock</p>
-                            </div>
-                        `;
+                        alertList.innerHTML = `<div class="empty-state" style="padding: var(--spacing-lg);"><i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i><p class="text-muted mt-2">Sin alertas de stock</p></div>`;
                     }
 
                     // Últimas compras
                     const purchasesBody = document.getElementById('recentPurchases');
                     purchasesBody.innerHTML = data.recentPurchases.map(p => `
-                        <tr>
-                            <td>#${p.id}</td>
-                            <td>${Utils.escapeHtml(p.proveedor || 'N/A')}</td>
-                            <td>${Utils.formatDate(p.fecha)}</td>
-                            <td>${Utils.formatCurrency(p.monto)}</td>
-                        </tr>
+                        <tr><td>#${p.id}</td><td>${Utils.escapeHtml(p.proveedor || 'N/A')}</td><td>${Utils.formatDate(p.fecha)}</td><td>${Utils.formatCurrency(p.monto)}</td></tr>
                     `).join('') || '<tr><td colspan="4" class="text-center text-muted">Sin compras recientes</td></tr>';
 
                     // Últimas ventas
                     const salesBody = document.getElementById('recentSales');
                     salesBody.innerHTML = data.recentSales.map(s => `
-                        <tr>
-                            <td>#${s.id}</td>
-                            <td>${Utils.escapeHtml(s.cliente || 'N/A')}</td>
-                            <td>${Utils.formatDate(s.fecha)}</td>
-                            <td>${Utils.formatCurrency(s.monto)}</td>
-                        </tr>
+                        <tr><td>#${s.id}</td><td>${Utils.escapeHtml(s.cliente || 'N/A')}</td><td>${Utils.formatDate(s.fecha)}</td><td>${Utils.formatCurrency(s.monto)}</td></tr>
                     `).join('') || '<tr><td colspan="4" class="text-center text-muted">Sin ventas recientes</td></tr>';
                 }
             } catch (error) {
@@ -496,22 +559,75 @@
             }
         }
 
+        // -------------------------------------------------------------
+        // GESTIÓN DE TASA DÓLAR Y CACHÉ
+        // -------------------------------------------------------------
+
+        async function loadDollarRate() {
+            const widget = document.getElementById('dollarWidget');
+            const valueEl = document.getElementById('dollarValue');
+            const CACHE_KEY = 'bcv_rate';
+            const CACHE_TIME_KEY = 'bcv_rate_ts';
+            const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 horas en milisegundos
+
+            // 1. Intentar cargar de caché
+            const cachedRate = localStorage.getItem(CACHE_KEY);
+            const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+            const now = Date.now();
+
+            if (cachedRate && cachedTime) {
+                const age = now - parseInt(cachedTime);
+                if (age < CACHE_DURATION) {
+                    // Caché válido
+                    console.log('Usando tasa dólar en caché');
+                    valueEl.textContent = `Bs. ${cachedRate}`;
+                    widget.style.display = 'flex';
+                    return;
+                }
+            }
+
+            // 2. Si no hay caché válido, consultar API
+            console.log('Consultando API tasa dólar...');
+            valueEl.textContent = '...';
+            widget.style.display = 'flex';
+
+            try {
+                const result = await API.reports.getDollarRate();
+
+                if (result.success && result.rate) {
+                    // Éxito: Mostrar y guardar en caché
+                    valueEl.textContent = `Bs. ${result.formatted}`;
+                    widget.classList.remove('error');
+
+                    localStorage.setItem(CACHE_KEY, result.formatted);
+                    localStorage.setItem(CACHE_TIME_KEY, now.toString());
+                } else {
+                    // Error manejado
+                    throw new Error(result.message || 'No disponible');
+                }
+            } catch (error) {
+                console.warn('Error obteniendo tasa:', error);
+                valueEl.textContent = 'No disponible';
+                widget.classList.add('error');
+            }
+        }
+
         // Event Listeners
         document.getElementById('chartYear').addEventListener('change', (e) => {
             updateCharts(e.target.value);
         });
 
-        // Inicializar
-        // Setear año actual en el selector si estamos en 2025 o 2026
+        // Inicialización
         const currentYear = new Date().getFullYear();
         const yearSelect = document.getElementById('chartYear');
-        if (yearSelect.querySelector(`option[value="${currentYear}"]`)) {
+        if (yearSelect && yearSelect.querySelector(`option[value="${currentYear}"]`)) {
             yearSelect.value = currentYear;
         }
 
         initCharts();
         loadDashboardData();
-        updateCharts(yearSelect.value); // Cargar gráficos con el año seleccionado
+        loadDollarRate(); // Carga con caché
+        updateCharts(yearSelect ? yearSelect.value : currentYear);
     </script>
 </body>
 

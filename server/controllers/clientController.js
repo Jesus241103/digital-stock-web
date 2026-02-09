@@ -138,9 +138,8 @@ async function create(req, res) {
         );
 
         // Bitácora
-        if (req.user) {
-            await logAction(req.user.cedula, req.user.nombre, 'Agrego un Nuevo Cliente.');
-        }
+        await logAction(req.user.cedula, req.user.nombre, 'Agrego un Nuevo Cliente');
+
 
         res.status(201).json({
             success: true,

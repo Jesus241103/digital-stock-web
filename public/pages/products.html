@@ -269,8 +269,8 @@
                 document.getElementById('productCodigo').value = p.codigo;
                 document.getElementById('productCodigo').disabled = true;
                 document.getElementById('productNombre').value = p.nombre;
-                document.getElementById('productPrecio').value = p.precio;
-                document.getElementById('productIva').value = p.iva;
+                document.getElementById('productPrecio').value = parseFloat(p.precio).toFixed(2);
+                document.getElementById('productIva').value = parseFloat(p.iva).toFixed(2);
                 document.getElementById('productCantidad').value = p.cantidad;
                 document.getElementById('productMin').value = p.min;
                 document.getElementById('productMax').value = p.max;

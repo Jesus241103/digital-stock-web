@@ -127,7 +127,7 @@ async function create(req, res) {
 
         // Bitácora
         if (req.user) {
-            await logAction(req.user.cedula, req.user.nombre, 'Agrego un Nuevo Producto.');
+            await logAction(req.user.cedula, req.user.nombre, 'Agrego un Nuevo Producto');
         }
 
         res.status(201).json({

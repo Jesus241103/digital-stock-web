@@ -16,7 +16,7 @@ const { sendInvoice } = require('../utils/email');
  */
 async function getAll(req, res) {
     try {
-        const { mes, limit } = req.query;
+        const { mes, limit, search } = req.query;
 
         let sql = `
             SELECT cs.id, cs.cedula as cliente_cedula, c.nombre as cliente_nombre,
@@ -25,10 +25,20 @@ async function getAll(req, res) {
             LEFT JOIN cliente c ON cs.cedula = c.cedula
         `;
         const params = [];
+        const conditions = [];
 
         if (mes) {
-            sql += ' WHERE MONTH(cs.fecha) = ?';
+            conditions.push('MONTH(cs.fecha) = ?');
             params.push(mes);
+        }
+
+        if (search) {
+            conditions.push('(cs.id LIKE ? OR cs.cedula LIKE ? OR c.nombre LIKE ?)');
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
         }
 
         sql += ' ORDER BY cs.id DESC';
@@ -225,7 +235,7 @@ async function create(req, res) {
 
         // Registrar en bitácora
         if (req.user) {
-            await logAction(req.user.cedula, req.user.nombre, 'Registro una Salida.');
+            await logAction(req.user.cedula, req.user.nombre, 'Registro una Salida');
         }
 
         // ----------------------------------------------------

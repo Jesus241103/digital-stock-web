@@ -291,8 +291,10 @@ if (!window.API) {
         reports: {
             getDashboard: () => API.get('/reports/dashboard'),
             getCharts: (params) => API.get('/reports/charts', params),
+            getCharts: (params) => API.get('/reports/charts', params),
             getMonthly: (month, year) => API.get(`/reports/monthly/${month}`, { year }),
-            getBiweekly: (month, year) => API.get(`/reports/biweekly/${month}`, { year })
+            getBiweekly: (month, year) => API.get(`/reports/biweekly/${month}`, { year }),
+            getDollarRate: () => API.get('/reports/dollar-rate')
         },
 
         // =========================================

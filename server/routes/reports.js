@@ -23,4 +23,7 @@ router.get('/monthly/:month', reportController.getMonthlyReport);
 // GET /api/reports/biweekly/:month - Reporte quincenal
 router.get('/biweekly/:month', reportController.getBiweeklyReport);
 
+// GET /api/reports/dollar-rate - Obtener tasa del dólar (BCV)
+router.get('/dollar-rate', reportController.getDollarRate);
+
 module.exports = router;

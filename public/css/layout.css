@@ -403,4 +403,39 @@
     color: var(--color-text-primary);
     font-size: var(--font-size-sm);
     min-width: 150px;
+    width: auto;
+    /* Modificado para layout horizontal */
+}
+
+/* Corrección Layout Horizontal Filtros */
+.filters-bar {
+    flex-wrap: nowrap;
+}
+
+.filters-bar .form-control,
+.filters-bar select {
+    width: auto;
+    flex: 1;
+    margin: 0 !important;
+    /* Sobrescribir estilos inline */
+}
+
+.filters-bar .search-box {
+    flex: 2;
+    /* Buscador más ancho */
+    width: auto;
+}
+
+/* Ajuste responsive para móviles */
+@media (max-width: 768px) {
+    .filters-bar {
+        flex-wrap: wrap;
+    }
+
+    .filters-bar .search-box,
+    .filters-bar .form-control,
+    .filters-bar .filter-select {
+        flex: 1 1 100%;
+        width: 100%;
+    }
 }
