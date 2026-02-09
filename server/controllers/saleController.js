@@ -44,8 +44,8 @@ async function getAll(req, res) {
         sql += ' ORDER BY cs.id DESC';
 
         if (limit && !isNaN(parseInt(limit))) {
-            sql += ' LIMIT ?';
-            params.push(parseInt(limit));
+            sql += ` LIMIT ${parseInt(limit)}`;
+            // params.push(parseInt(limit)); // Eliminado param, interpolado directo
         }
 
         const sales = await query(sql, params);
