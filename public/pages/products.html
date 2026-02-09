@@ -55,6 +55,7 @@
                         <option value="bajo">Stock bajo</option>
                         <option value="normal">Stock normal</option>
                         <option value="alto">Stock alto</option>
+                        <option value="agotado">Agotado (Sin Stock)</option>
                     </select>
                 </div>
 
@@ -180,17 +181,23 @@
 
                 // Filtrar por stock si es necesario
                 if (stockFilter === 'bajo') {
-                    products = products.filter(p => p.cantidad <= p.min);
+                    products = products.filter(p => p.cantidad > 0 && p.cantidad <= p.min);
                 } else if (stockFilter === 'normal') {
                     products = products.filter(p => p.cantidad > p.min && p.cantidad < p.max);
                 } else if (stockFilter === 'alto') {
                     products = products.filter(p => p.cantidad >= p.max);
+                } else if (stockFilter === 'agotado') {
+                    products = products.filter(p => p.cantidad === 0);
                 }
 
                 tbody.innerHTML = products.map(p => {
                     let stockBadge = 'badge-success';
                     let stockText = 'Normal';
-                    if (p.cantidad <= p.min) {
+
+                    if (p.cantidad === 0) {
+                        stockBadge = 'badge-exhausted';
+                        stockText = 'Agotado';
+                    } else if (p.cantidad <= p.min) {
                         stockBadge = 'badge-danger';
                         stockText = 'Bajo';
                     } else if (p.cantidad >= p.max) {

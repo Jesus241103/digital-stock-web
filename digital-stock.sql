@@ -27,16 +27,56 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `usuario`
+--
+
+CREATE TABLE `usuario` (
+  `cedula` int(20) NOT NULL,
+  `nombre` varchar(50) NOT NULL,
+  `tlfn` varchar(20) NOT NULL,
+  `clave` varchar(60) NOT NULL,
+  `rol` varchar(50) NOT NULL,
+  PRIMARY KEY (`cedula`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Volcado de datos para la tabla `usuario`
+--
+
+INSERT INTO `usuario` (`cedula`, `nombre`, `tlfn`, `clave`, `rol`) VALUES
+(10123123, 'FRANCISCO MARTINEZ', '04120483988', '$2b$10$FfQUV2ultXZdOVc8ZqdNgufdCOv3wIhWu/elO33zN5G9jIqWQ0sGe', 'admin');
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `bitacora`
 --
 
 CREATE TABLE `bitacora` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `cedula` int(20) NOT NULL,
   `nombre` varchar(50) NOT NULL,
   `fecha` date NOT NULL,
   `hora` varchar(50) NOT NULL,
-  `accion` enum('Agrego un Nuevo Cliente','Agrego un Nuevo Producto','	Agrego un Nuevo Proveedor','Inicio de sesión','Registro una Entrada','Registro una Salida') NOT NULL
+  `accion` enum('Agrego un Nuevo Cliente','Agrego un Nuevo Producto','	Agrego un Nuevo Proveedor','Inicio de sesión','Registro una Entrada','Registro una Salida') NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `cedula` (`cedula`),
+  CONSTRAINT `bitacora_ibfk_1` FOREIGN KEY (`cedula`) REFERENCES `usuario` (`cedula`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `proveedor`
+--
+
+CREATE TABLE `proveedor` (
+  `codigo` int(11) NOT NULL,
+  `nombre` varchar(50) NOT NULL,
+  `telefono` varchar(50) NOT NULL,
+  `email` varchar(50) NOT NULL,
+  `estado` tinyint(1) NOT NULL,
+  PRIMARY KEY (`codigo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -46,25 +86,14 @@ CREATE TABLE `bitacora` (
 --
 
 CREATE TABLE `cab_factura` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `cedula` int(11) NOT NULL,
   `fecha` date NOT NULL,
   `hora` varchar(20) NOT NULL,
-  `monto` float NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `cab_salida`
---
-
-CREATE TABLE `cab_salida` (
-  `id` int(11) NOT NULL,
-  `cedula` int(11) NOT NULL,
-  `fecha` date NOT NULL,
-  `hora` varchar(20) NOT NULL,
-  `monto` float NOT NULL
+  `monto` float NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_cedula_proveedor` (`cedula`),
+  CONSTRAINT `fk_cedula_proveedor` FOREIGN KEY (`cedula`) REFERENCES `proveedor` (`codigo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -77,37 +106,25 @@ CREATE TABLE `cliente` (
   `cedula` int(11) NOT NULL,
   `nombre` varchar(50) NOT NULL,
   `telefono` varchar(50) NOT NULL,
-  `email` varchar(50) NOT NULL
+  `email` varchar(50) NOT NULL,
+  PRIMARY KEY (`cedula`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `detalle_fac`
+-- Estructura de tabla para la tabla `cab_salida`
 --
 
-CREATE TABLE `detalle_fac` (
-  `id` int(11) NOT NULL,
-  `codigo_producto` int(11) NOT NULL,
-  `nombre` varchar(50) NOT NULL,
-  `precio` float NOT NULL,
-  `iva` float NOT NULL,
-  `cantidad` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `detalle_salida`
---
-
-CREATE TABLE `detalle_salida` (
-  `id` int(11) NOT NULL,
-  `codigo_producto` int(11) NOT NULL,
-  `nombre` varchar(50) NOT NULL,
-  `precio` float NOT NULL,
-  `iva` float NOT NULL,
-  `cantidad` int(11) NOT NULL
+CREATE TABLE `cab_salida` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `cedula` int(11) NOT NULL,
+  `fecha` date NOT NULL,
+  `hora` varchar(20) NOT NULL,
+  `monto` float NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_cedula_cliente` (`cedula`),
+  CONSTRAINT `fk_cedula_cliente` FOREIGN KEY (`cedula`) REFERENCES `cliente` (`cedula`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -124,167 +141,55 @@ CREATE TABLE `producto` (
   `min` int(11) NOT NULL,
   `max` int(11) NOT NULL,
   `cantidad` int(11) NOT NULL,
-  `estado` tinyint(1) NOT NULL
+  `estado` tinyint(1) NOT NULL,
+  PRIMARY KEY (`codigo`),
+  UNIQUE KEY `nombre` (`nombre`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `proveedor`
+-- Estructura de tabla para la tabla `detalle_fac`
 --
 
-CREATE TABLE `proveedor` (
-  `codigo` int(11) NOT NULL,
+CREATE TABLE `detalle_fac` (
+  `id_detalle` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
+  `codigo_producto` int(11) NOT NULL,
   `nombre` varchar(50) NOT NULL,
-  `telefono` varchar(50) NOT NULL,
-  `email` varchar(50) NOT NULL,
-  `estado` tinyint(1) NOT NULL
+  `precio` float NOT NULL,
+  `iva` float NOT NULL,
+  `cantidad` int(11) NOT NULL,
+  PRIMARY KEY (`id_detalle`),
+  KEY `fk_detalle_entrada_cabecera` (`id`),
+  KEY `fk_codigo_producto` (`codigo_producto`),
+  CONSTRAINT `detalle_fac_ibfk_1` FOREIGN KEY (`id`) REFERENCES `cab_factura` (`id`),
+  CONSTRAINT `fk_codigo_producto` FOREIGN KEY (`codigo_producto`) REFERENCES `producto` (`codigo`),
+  CONSTRAINT `fk_detalle_entrada_cabecera` FOREIGN KEY (`id`) REFERENCES `cab_factura` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `usuario`
+-- Estructura de tabla para la tabla `detalle_salida`
 --
 
-CREATE TABLE `usuario` (
-  `cedula` int(20) NOT NULL,
+CREATE TABLE `detalle_salida` (
+  `id_detalle` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
+  `codigo_producto` int(11) NOT NULL,
   `nombre` varchar(50) NOT NULL,
-  `tlfn` varchar(20) NOT NULL,
-  `clave` varchar(60) NOT NULL,
-  `rol` varchar(50) NOT NULL
+  `precio` float NOT NULL,
+  `iva` float NOT NULL,
+  `cantidad` int(11) NOT NULL,
+  PRIMARY KEY (`id_detalle`),
+  KEY `fk_detalle_salida_cabecera` (`id`),
+  KEY `fk_codigo_producto_salida` (`codigo_producto`),
+  CONSTRAINT `detalle_salida_ibfk_1` FOREIGN KEY (`id`) REFERENCES `cab_salida` (`id`),
+  CONSTRAINT `fk_codigo_producto_salida` FOREIGN KEY (`codigo_producto`) REFERENCES `producto` (`codigo`),
+  CONSTRAINT `fk_detalle_salida_cabecera` FOREIGN KEY (`id`) REFERENCES `cab_salida` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
---
--- Volcado de datos para la tabla `usuario`
---
-
-INSERT INTO `usuario` (`cedula`, `nombre`, `tlfn`, `clave`, `rol`) VALUES
-(10123123, 'FRANCISCO MARTINEZ', '04120483988', '$2b$10$FfQUV2ultXZdOVc8ZqdNgufdCOv3wIhWu/elO33zN5G9jIqWQ0sGe', 'admin');
-
---
--- Índices para tablas volcadas
---
-
---
--- Indices de la tabla `bitacora`
---
-ALTER TABLE `bitacora`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `cedula` (`cedula`);
-
---
--- Indices de la tabla `cab_factura`
---
-ALTER TABLE `cab_factura`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_cedula_proveedor` (`cedula`);
-
---
--- Indices de la tabla `cab_salida`
---
-ALTER TABLE `cab_salida`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_cedula_cliente` (`cedula`);
-
---
--- Indices de la tabla `cliente`
---
-ALTER TABLE `cliente`
-  ADD PRIMARY KEY (`cedula`);
-
---
--- Indices de la tabla `detalle_fac`
---
-ALTER TABLE `detalle_fac`
-  ADD KEY `fk_detalle_entrada_cabecera` (`id`),
-  ADD KEY `fk_codigo_producto` (`codigo_producto`);
-
---
--- Indices de la tabla `detalle_salida`
---
-ALTER TABLE `detalle_salida`
-  ADD KEY `fk_detalle_salida_cabecera` (`id`),
-  ADD KEY `fk_codigo_producto_salida` (`codigo_producto`);
-
---
--- Indices de la tabla `producto`
---
-ALTER TABLE `producto`
-  ADD PRIMARY KEY (`codigo`),
-  ADD UNIQUE KEY `nombre` (`nombre`);
-
---
--- Indices de la tabla `proveedor`
---
-ALTER TABLE `proveedor`
-  ADD PRIMARY KEY (`codigo`);
-
---
--- Indices de la tabla `usuario`
---
-ALTER TABLE `usuario`
-  ADD PRIMARY KEY (`cedula`);
-
---
--- AUTO_INCREMENT de las tablas volcadas
---
-
---
--- AUTO_INCREMENT de la tabla `bitacora`
---
-ALTER TABLE `bitacora`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=133;
-
---
--- AUTO_INCREMENT de la tabla `cab_factura`
---
-ALTER TABLE `cab_factura`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=167;
-
---
--- AUTO_INCREMENT de la tabla `cab_salida`
---
-ALTER TABLE `cab_salida`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=95;
-
---
--- Restricciones para tablas volcadas
---
-
---
--- Filtros para la tabla `bitacora`
---
-ALTER TABLE `bitacora`
-  ADD CONSTRAINT `bitacora_ibfk_1` FOREIGN KEY (`cedula`) REFERENCES `usuario` (`cedula`);
-
---
--- Filtros para la tabla `cab_factura`
---
-ALTER TABLE `cab_factura`
-  ADD CONSTRAINT `fk_cedula_proveedor` FOREIGN KEY (`cedula`) REFERENCES `proveedor` (`codigo`);
-
---
--- Filtros para la tabla `cab_salida`
---
-ALTER TABLE `cab_salida`
-  ADD CONSTRAINT `fk_cedula_cliente` FOREIGN KEY (`cedula`) REFERENCES `cliente` (`cedula`);
-
---
--- Filtros para la tabla `detalle_fac`
---
-ALTER TABLE `detalle_fac`
-  ADD CONSTRAINT `detalle_fac_ibfk_1` FOREIGN KEY (`id`) REFERENCES `cab_factura` (`id`),
-  ADD CONSTRAINT `fk_codigo_producto` FOREIGN KEY (`codigo_producto`) REFERENCES `producto` (`codigo`),
-  ADD CONSTRAINT `fk_detalle_entrada_cabecera` FOREIGN KEY (`id`) REFERENCES `cab_factura` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `detalle_salida`
---
-ALTER TABLE `detalle_salida`
-  ADD CONSTRAINT `detalle_salida_ibfk_1` FOREIGN KEY (`id`) REFERENCES `cab_salida` (`id`),
-  ADD CONSTRAINT `fk_codigo_producto_salida` FOREIGN KEY (`codigo_producto`) REFERENCES `producto` (`codigo`),
-  ADD CONSTRAINT `fk_detalle_salida_cabecera` FOREIGN KEY (`id`) REFERENCES `cab_salida` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
