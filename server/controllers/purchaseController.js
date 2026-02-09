@@ -43,7 +43,7 @@ async function getAll(req, res) {
 
         sql += ' ORDER BY cf.id DESC';
 
-        if (limit) {
+        if (limit && !isNaN(parseInt(limit))) {
             sql += ' LIMIT ?';
             params.push(parseInt(limit));
         }

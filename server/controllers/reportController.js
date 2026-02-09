@@ -336,50 +336,71 @@ async function getChartData(req, res) {
  * Obtener tasa del dólar (BCV)
  * GET /api/reports/dollar-rate
  */
-function getDollarRate(req, res) {
-    const { exec } = require('child_process');
-    const path = require('path');
+const cheerio = require('cheerio');
 
-    // Ruta al script en la raíz del proyecto
-    const scriptPath = path.join(__dirname, '../../extract-dolar.js');
+// ... (código existente)
 
-    exec(`node "${scriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-            console.error('Error al ejecutar script de dólar:', error);
+/**
+ * Obtener tasa del dólar (BCV)
+ * GET /api/reports/dollar-rate
+ */
+async function getDollarRate(req, res) {
+    try {
+        // Configuración para fetch (timeout de 5s e ignorar SSL si es necesario)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        // Nota: En Node 18+ fetch es nativo. 
+        // BCV a veces tiene problemas de SSL, en producción Vercel suele manejarlos bien,
+        // pero si falla por certificados locales, se podría necesitar https.Agent (no soportado directamente en fetch estándar).
+        // Sin embargo, Vercel usa Node 18/20 donde fetch suele funcionar.
+
+        const response = await fetch('https://www.bcv.org.ve/', {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        // Selector específico del BCV
+        const dolarElement = $('#dolar .col-sm-6.col-xs-6.centrado strong');
+        let dolarValue = dolarElement.text().trim();
+
+        // Limpiar y parsear (formato europeo: 62,50 -> 62.50)
+        dolarValue = dolarValue.replace(',', '.');
+        const rate = parseFloat(dolarValue);
+
+        if (!isNaN(rate) && rate > 0) {
             return res.json({
-                success: false,
-                message: 'Error al ejecutar script de obtención de tasa',
-                rate: null
+                success: true,
+                rate: rate,
+                formatted: rate.toFixed(2),
+                source: 'BCV'
             });
         }
 
-        // El script imprime "dolar= 62,50" o "dolar=-1"
-        // Buscamos la línea que contiene "dolar="
-        const match = stdout.match(/dolar=\s*([\d,.-]+)/);
+        throw new Error('Formato de tasa no válido');
 
-        if (match && match[1]) {
-            // Reemplazar coma por punto para parsear
-            let rateStr = match[1].replace(',', '.');
-            let rate = parseFloat(rateStr);
+    } catch (error) {
+        console.error('Error obteniendo tasa BCV:', error.message);
 
-            if (!isNaN(rate) && rate > 0) {
-                return res.json({
-                    success: true,
-                    rate: rate,
-                    formatted: rate.toFixed(2),
-                    source: 'BCV'
-                });
-            }
-        }
-
-        // Si llegamos aquí, no se pudo obtener un valor válido
-        console.warn('No se pudo obtener tasa del dólar. Salida:', stdout);
+        // Retornar error controlado para que el frontend lo maneje
         res.json({
             success: false,
             message: 'No se pudo obtener la tasa del día',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
             rate: null
         });
-    });
+    }
 }
 
 module.exports = {
