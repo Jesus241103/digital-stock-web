@@ -52,7 +52,10 @@ async function getAll(req, res) {
         console.error('Error al obtener bitácora:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al obtener bitácora'
+            message: 'Error al obtener bitácora',
+            error: error.message,
+            sqlMessage: error.sqlMessage,
+            code: error.code
         });
     }
 }

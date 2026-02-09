@@ -397,7 +397,7 @@ async function getDollarRate(req, res) {
         res.json({
             success: false,
             message: 'No se pudo obtener la tasa del día',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            error: error.message, // Mostrar siempre el error para debug
             rate: null
         });
     }

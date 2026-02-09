@@ -60,7 +60,10 @@ async function getAll(req, res) {
         console.error('Error al obtener ventas:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al obtener ventas'
+            message: 'Error al obtener ventas',
+            error: error.message,
+            sqlMessage: error.sqlMessage,
+            code: error.code
         });
     }
 }
