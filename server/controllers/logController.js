@@ -35,7 +35,7 @@ async function getAll(req, res) {
 
         sql += ' ORDER BY id DESC';
 
-        if (limit) {
+        if (limit && !isNaN(parseInt(limit))) {
             sql += ' LIMIT ?';
             params.push(parseInt(limit));
         }
