@@ -135,6 +135,9 @@ async function startServer() {
     });
 }
 
-startServer();
+// Iniciar servidor solo si se ejecuta directamente (no en modo test/importación)
+if (require.main === module) {
+    startServer();
+}
 
 module.exports = app;
