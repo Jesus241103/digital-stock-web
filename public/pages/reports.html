@@ -312,9 +312,9 @@
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
-            const today = new Date();
-            document.getElementById('reportYear').value = today.getFullYear();
-            document.getElementById('reportMonth').value = today.getMonth() + 1;
+            // Default requerido: Año 2025
+            document.getElementById('reportYear').value = 2025;
+            document.getElementById('reportMonth').value = new Date().getMonth() + 1; // Mes actual (o fijo si se prefiere)
 
             // Event Listeners para carga dinámica
             ['reportType', 'reportMonth', 'reportYear'].forEach(id => {

@@ -618,7 +618,7 @@
         });
 
         // Inicialización
-        const currentYear = new Date().getFullYear();
+        const currentYear = 2025; // Default requerido por usuario
         const yearSelect = document.getElementById('chartYear');
         if (yearSelect && yearSelect.querySelector(`option[value="${currentYear}"]`)) {
             yearSelect.value = currentYear;

@@ -40,6 +40,11 @@
                         <i class="fas fa-search"></i>
                         <input type="text" id="searchInput" placeholder="Buscar por cédula o nombre...">
                     </div>
+                    <select class="filter-select form-control" id="statusFilter" onchange="loadClients()">
+                        <option value="active">Activos</option>
+                        <option value="inactive">Inactivos</option>
+                        <option value="all">Todos los estados</option>
+                    </select>
                 </div>
 
                 <!-- Tabla -->
@@ -53,12 +58,13 @@
                                         <th>Nombre</th>
                                         <th>Teléfono</th>
                                         <th>Email</th>
+                                        <th>Estado</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="clientsBody">
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted p-4">Cargando...</td>
+                                        <td colspan="6" class="text-center text-muted p-4">Cargando...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -112,28 +118,52 @@
 
         async function loadClients() {
             const search = document.getElementById('searchInput').value.trim();
-            const result = await API.clients.getAll(search ? { search } : {});
+            const status = document.getElementById('statusFilter').value;
+
+            const params = {};
+            if (search) params.search = search;
+            if (status) params.status = status;
+
+            const result = await API.clients.getAll(params);
             const tbody = document.getElementById('clientsBody');
 
             if (result.success && result.data.length > 0) {
-                tbody.innerHTML = result.data.map(c => `
-                    <tr>
+                tbody.innerHTML = result.data.map(c => {
+                    const isActive = c.estado === 1;
+                    const statusBadge = isActive
+                        ? '<span class="badge badge-success">Activo</span>'
+                        : '<span class="badge badge-danger">Inactivo</span>';
+
+                    const rowClass = isActive ? '' : 'opacity-50';
+
+                    const toggleBtn = isActive
+                        ? `<button class="btn btn-ghost btn-sm text-danger" onclick="toggleStatus('${c.cedula}', 0)" title="Desactivar"><i class="fas fa-trash"></i></button>`
+                        : `<button class="btn btn-ghost btn-sm text-success" onclick="toggleStatus('${c.cedula}', 1)" title="Activar"><i class="fas fa-check"></i></button>`;
+
+                    return `
+                    <tr class="${rowClass}">
                         <td><strong>${c.cedula}</strong></td>
-                        <td>${Utils.escapeHtml(c.nombre)}</td>
+                        <td>
+                            ${Utils.escapeHtml(c.nombre)}
+                            ${!isActive ? '<span class="badge badge-secondary ml-2" style="font-size: 0.7em;">Inactivo</span>' : ''}
+                        </td>
                         <td>${c.telefono || '-'}</td>
                         <td>${Utils.escapeHtml(c.email || '-')}</td>
+                        <td>${statusBadge}</td>
                         <td class="table-actions">
                             <button class="btn btn-ghost btn-sm" onclick="editClient('${c.cedula}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-ghost btn-sm text-danger" onclick="deleteClient('${c.cedula}')"><i class="fas fa-trash"></i></button>
+                            ${toggleBtn}
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">No hay clientes</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">No hay clientes</td></tr>';
             }
         }
 
         document.getElementById('searchInput').addEventListener('input', Utils.debounce(loadClients, 300));
+        // Nota: statusFilter tiene onchange inline en el HTML, pero es mejor agregarlo aquí también por consistencia
+        // document.getElementById('statusFilter').addEventListener('change', loadClients);
 
         function openClientModal() {
             editingCedula = null;
@@ -186,12 +216,20 @@
             }
         }
 
-        async function deleteClient(cedula) {
-            Utils.confirm('¿Eliminar este cliente?', async () => {
-                const result = await API.clients.delete(cedula);
-                result.success ? Utils.success(result.message) && loadClients() : Utils.error(result.message);
-                loadClients();
-            }, 'Eliminar');
+        async function toggleStatus(cedula, nuevoEstado) {
+            const accion = nuevoEstado === 1 ? 'activar' : 'eliminar/desactivar';
+
+            Utils.confirm(`¿Está seguro de ${accion} este cliente?`, async () => {
+                // Usamos update para ambos casos ya que clientController.js soporta actualizar el estado en update()
+                const result = await API.clients.update(cedula, { estado: nuevoEstado });
+
+                if (result.success) {
+                    Utils.success(nuevoEstado === 1 ? 'Cliente activado' : 'Cliente desactivado');
+                    loadClients();
+                } else {
+                    Utils.error(result.message);
+                }
+            }, nuevoEstado === 1 ? 'Activar' : 'Eliminar');
         }
 
         loadClients();

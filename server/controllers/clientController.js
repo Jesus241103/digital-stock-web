@@ -14,14 +14,28 @@ const { logAction } = require('./logController');
  */
 async function getAll(req, res) {
     try {
-        const { search } = req.query;
+        const { search, status } = req.query;
 
         let sql = 'SELECT * FROM cliente';
         const params = [];
+        const conditions = [];
 
         if (search) {
-            sql += ' WHERE nombre LIKE ? OR cedula LIKE ?';
+            conditions.push('(nombre LIKE ? OR cedula LIKE ?)');
             params.push(`%${search}%`, `%${search}%`);
+        }
+
+        // Por defecto mostrar activos, a menos que se pida 'all' o 'inactive'
+        if (status === 'inactive') {
+            conditions.push('estado = 0');
+        } else if (status === 'all') {
+            // No filtrar por estado
+        } else {
+            conditions.push('estado = 1'); // Default: solo activos
+        }
+
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
         }
 
         sql += ' ORDER BY nombre ASC';
@@ -78,18 +92,18 @@ async function getByCedula(req, res) {
 }
 
 /**
- * Buscar clientes para autocomplete
+ * Buscar clientes para autocomplete (SOLO ACTIVOS)
  * GET /api/clients/search
  */
 async function search(req, res) {
     try {
         const { q } = req.query;
 
-        let sql = 'SELECT cedula, nombre, telefono, email FROM cliente';
+        let sql = 'SELECT cedula, nombre, telefono, email FROM cliente WHERE estado = 1';
         const params = [];
 
         if (q && q.trim().length > 0) {
-            sql += ' WHERE nombre LIKE ? OR cedula LIKE ?';
+            sql += ' AND (nombre LIKE ? OR cedula LIKE ?)';
             params.push(`%${q}%`, `%${q}%`);
         }
 
@@ -121,11 +135,27 @@ async function create(req, res) {
 
         // Verificar si ya existe
         const existing = await query(
-            'SELECT cedula FROM cliente WHERE cedula = ?',
+            'SELECT cedula, estado FROM cliente WHERE cedula = ?',
             [cedula]
         );
 
         if (existing.length > 0) {
+            const client = existing[0];
+            if (client.estado === 0) {
+                // Reactivar cliente si existe pero está inactivo
+                await query(
+                    'UPDATE cliente SET nombre = ?, telefono = ?, email = ?, estado = 1 WHERE cedula = ?',
+                    [nombre, telefono, email, cedula]
+                );
+
+                await logAction(req.user.cedula, req.user.nombre, 'Reactivo Cliente');
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'Cliente reactivado exitosamente'
+                });
+            }
+
             return res.status(400).json({
                 success: false,
                 message: 'Ya existe un cliente con esa cédula'
@@ -133,7 +163,7 @@ async function create(req, res) {
         }
 
         await query(
-            'INSERT INTO cliente (cedula, nombre, telefono, email) VALUES (?, ?, ?, ?)',
+            'INSERT INTO cliente (cedula, nombre, telefono, email, estado) VALUES (?, ?, ?, ?, 1)',
             [cedula, nombre, telefono, email]
         );
 
@@ -162,12 +192,26 @@ async function create(req, res) {
 async function update(req, res) {
     try {
         const { cedula } = req.params;
-        const { nombre, telefono, email } = req.body;
+        const { nombre, telefono, email, estado } = req.body; // Acepta estado también
 
-        const result = await query(
-            'UPDATE cliente SET nombre = ?, telefono = ?, email = ? WHERE cedula = ?',
-            [nombre, telefono, email, cedula]
-        );
+        // Construir query dinámico para permitir actualizar solo estado
+        let sql = 'UPDATE cliente SET ';
+        const params = [];
+        const updates = [];
+
+        if (nombre !== undefined) { updates.push('nombre = ?'); params.push(nombre); }
+        if (telefono !== undefined) { updates.push('telefono = ?'); params.push(telefono); }
+        if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+        if (estado !== undefined) { updates.push('estado = ?'); params.push(estado); }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, message: 'No hay datos para actualizar' });
+        }
+
+        sql += updates.join(', ') + ' WHERE cedula = ?';
+        params.push(cedula);
+
+        const result = await query(sql, params);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({
@@ -191,15 +235,16 @@ async function update(req, res) {
 }
 
 /**
- * Eliminar cliente
+ * Eliminar cliente (Lógico)
  * DELETE /api/clients/:cedula
  */
 async function remove(req, res) {
     try {
         const { cedula } = req.params;
 
+        // Eliminación lógica: update estado = 0
         const result = await query(
-            'DELETE FROM cliente WHERE cedula = ?',
+            'UPDATE cliente SET estado = 0 WHERE cedula = ?',
             [cedula]
         );
 
@@ -212,18 +257,11 @@ async function remove(req, res) {
 
         res.json({
             success: true,
-            message: 'Cliente eliminado exitosamente'
+            message: 'Cliente desactivado exitosamente (eliminación lógica)'
         });
 
     } catch (error) {
         console.error('Error al eliminar cliente:', error);
-        // Si hay facturas asociadas, no se puede eliminar
-        if (error.code === 'ER_ROW_IS_REFERENCED_2') {
-            return res.status(400).json({
-                success: false,
-                message: 'No se puede eliminar, el cliente tiene ventas asociadas'
-            });
-        }
         res.status(500).json({
             success: false,
             message: 'Error al eliminar cliente'
@@ -232,12 +270,12 @@ async function remove(req, res) {
 }
 
 /**
- * Contar clientes
+ * Contar clientes (Activos)
  * GET /api/clients/count
  */
 async function count(req, res) {
     try {
-        const result = await query('SELECT COUNT(*) as total FROM cliente');
+        const result = await query('SELECT COUNT(*) as total FROM cliente WHERE estado = 1');
 
         res.json({
             success: true,

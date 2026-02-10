@@ -299,7 +299,7 @@ async function getChartData(req, res) {
                     WHEN cantidad <= min THEN 'Bajo'
                     WHEN cantidad >= max THEN 'Exceso'
                     ELSE 'Normal'
-                END as nivel,
+                    END as nivel,
                 COUNT(*) as cantidad
              FROM producto
              WHERE estado = 1
@@ -332,71 +332,54 @@ async function getChartData(req, res) {
     }
 }
 
-/**
- * Obtener tasa del dólar (BCV)
- * GET /api/reports/dollar-rate
- */
-const cheerio = require('cheerio');
-
-// ... (código existente)
+// Dependencia eliminada: const cheerio = require('cheerio');
 
 /**
- * Obtener tasa del dólar (BCV)
+ * Obtener tasa del dólar (API Oficial)
  * GET /api/reports/dollar-rate
  */
 async function getDollarRate(req, res) {
     try {
-        // Configuración para fetch (timeout de 5s e ignorar SSL si es necesario)
+        const apiUrl = process.env.DOLAR_API_URL || 'https://ve.dolarapi.com/v1/dolares/oficial';
+
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-        // Nota: En Node 18+ fetch es nativo. 
-        // BCV a veces tiene problemas de SSL, en producción Vercel suele manejarlos bien,
-        // pero si falla por certificados locales, se podría necesitar https.Agent (no soportado directamente en fetch estándar).
-        // Sin embargo, Vercel usa Node 18/20 donde fetch suele funcionar.
-
-        const response = await fetch('https://www.bcv.org.ve/', {
+        const response = await fetch(apiUrl, {
             signal: controller.signal,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
+            headers: { 'Accept': 'application/json' }
         });
 
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
+            throw new Error(`Error API: ${response.status}`);
         }
 
-        const html = await response.text();
-        const $ = cheerio.load(html);
+        const data = await response.json();
 
-        // Selector específico del BCV
-        const dolarElement = $('#dolar .col-sm-6.col-xs-6.centrado strong');
-        let dolarValue = dolarElement.text().trim();
-
-        // Limpiar y parsear (formato europeo: 62,50 -> 62.50)
-        dolarValue = dolarValue.replace(',', '.');
-        const rate = parseFloat(dolarValue);
+        // La API devuelve: { "promedio": 382.6318, "fechaActualizacion": ... }
+        const rate = parseFloat(data.promedio);
 
         if (!isNaN(rate) && rate > 0) {
             return res.json({
                 success: true,
                 rate: rate,
                 formatted: rate.toFixed(2),
-                source: 'BCV'
+                source: 'DolarAPI',
+                lastUpdate: data.fechaActualizacion
             });
         }
 
-        throw new Error('Formato de tasa no válido');
+        throw new Error('Formato de tasa no válido en respuesta API');
 
     } catch (error) {
-        console.error('Error obteniendo tasa BCV:', error.message);
+        console.error('Error obteniendo tasa API:', error.message);
 
         // Fallback silencioso: retornar 0 en lugar de error
-        console.warn('Usando fallback de tasa (0) por error en scraping');
+        console.warn('Usando fallback de tasa (0) por error en API');
         res.json({
-            success: true, // Marcar como éxito para que el front lo muestre
+            success: true,
             rate: 0,
             formatted: '0.00',
             source: 'fallback',
